@@ -6,7 +6,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UserModule } from '../user/user.module';
 import { PassportModule } from '@nestjs/passport';
-import { JwtStrategy } from './jwt.strategy'; 
+import { JwtStrategy } from './jwt.strategy';
+import { WalletModule } from '../wallet/wallet.module'; // 💡 WalletModule 임포트
 
 @Module({
   imports: [
@@ -22,10 +23,11 @@ import { JwtStrategy } from './jwt.strategy';
       inject: [ConfigService],
     }),
     UserModule,
-    PassportModule, // 👈 PassportModule 임포트 (이전에도 있었지만, 혹시 빠졌을까봐 재확인)
+    PassportModule,
+    WalletModule, // 💡 WalletModule을 imports에 추가
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy], // 👈 JwtStrategy를 providers에 추가
-  exports: [AuthService, JwtModule, PassportModule], // 👈 PassportModule도 export
+  providers: [AuthService, JwtStrategy],
+  exports: [AuthService, JwtModule, PassportModule],
 })
 export class AuthModule {}

@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm'; // TypeORM 임포트
 import { ConfigModule, ConfigService } from '@nestjs/config'; // ConfigModule 임포트
 import { UserModule } from './user/user.module'; // UserModule 임포트
 import { User } from './user/entities/user.entity'; // User 엔티티 임포트
+import { WalletModule } from './wallet/wallet.module';
 
 @Module({
   imports: [
@@ -29,7 +30,8 @@ import { User } from './user/entities/user.entity'; // User 엔티티 임포트
       inject: [ConfigService],
     }),
     AuthModule,
-    UserModule, // UserModule 임포트
+    UserModule,
+    WalletModule, // UserModule 임포트
     // WalletModule 등 다른 모듈들도 여기에 추가
   ],
   controllers: [AppController],
