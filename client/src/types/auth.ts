@@ -15,8 +15,6 @@ export interface RegisterPayload {
   password: string;   // 비밀번호
   phoneNumber: string; // 전화번호
   email: string;      // 이메일
-  // '비밀번호 확인' 필드는 일반적으로 프론트엔드에서만 유효성 검사 (비밀번호 일치 여부)에 사용되고,
-  // 백엔드에는 최종 'password'만 전송되므로 여기에 포함하지 않습니다.
 }
 
 // 로그인 또는 회원가입 성공 시 서버가 반환하는 사용자 정보의 구조를 정의합니다.
@@ -27,8 +25,8 @@ export interface UserInfo {
   name: string;       // 이름
   email: string;      // 이메일
   phoneNumber: string; // 전화번호
-  // 백엔드에서 반환하는 다른 사용자 정보가 있다면 여기에 추가합니다.
-  // 예: createdAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // 로그인 또는 회원가입 성공 시 서버 응답의 전체 구조를 정의합니다.

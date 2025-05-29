@@ -1,7 +1,7 @@
 // TokenWallet/client/src/api/auth.ts
 
 import axiosClient from './axiosClient';
-import { LoginPayload, RegisterPayload, AuthResponse } from '../types/auth';
+import { LoginPayload, RegisterPayload, AuthResponse, UserInfo } from '../types/auth'; // User 대신 UserInfo 임포트
 
 /**
  * 로그인 API를 호출하는 함수입니다.
@@ -51,6 +51,22 @@ export const logout = async (): Promise<{ message: string }> => {
     return response.data;
   } catch (error) {
     console.error("Logout API error:", error);
+    throw error;
+  }
+};
+
+/**
+ * 현재 로그인된 사용자 정보를 가져오는 함수입니다.
+ * 백엔드의 /users/me 엔드포인트로 요청하여 사용자 정보를 반환합니다.
+ *
+ * @returns Promise<UserInfo> 현재 로그인된 사용자의 정보
+ */
+export const fetchCurrentUser = async (): Promise<UserInfo> => {
+  try {
+    const response = await axiosClient.get<UserInfo>('/users/me'); // axiosClient 사용
+    return response.data;
+  } catch (error) {
+    console.error("Fetch current user API error:", error);
     throw error;
   }
 };

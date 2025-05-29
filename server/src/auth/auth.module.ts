@@ -4,7 +4,9 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { UserModule } from '../user/user.module'; // 👈 UserModule 임포트 추가
+import { UserModule } from '../user/user.module';
+import { PassportModule } from '@nestjs/passport';
+import { JwtStrategy } from './jwt.strategy'; 
 
 @Module({
   imports: [
@@ -19,10 +21,11 @@ import { UserModule } from '../user/user.module'; // 👈 UserModule 임포트 �
       }),
       inject: [ConfigService],
     }),
-    UserModule, // 👈 이곳에 UserModule을 추가합니다.
+    UserModule,
+    PassportModule, // 👈 PassportModule 임포트 (이전에도 있었지만, 혹시 빠졌을까봐 재확인)
   ],
-  providers: [AuthService],
   controllers: [AuthController],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy], // 👈 JwtStrategy를 providers에 추가
+  exports: [AuthService, JwtModule, PassportModule], // 👈 PassportModule도 export
 })
 export class AuthModule {}

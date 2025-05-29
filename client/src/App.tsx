@@ -1,14 +1,20 @@
 // TokenWallet/client/src/App.tsx
-import React from 'react';
-import AppRouter from './routes/AppRouter'; // AppRouter 임포트
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LoginPage from './pages/auth/LoginPage';
+import RegisterPage from './pages/auth/RegisterPage';
+import DashboardPage from './pages/dashboard/DashboardPage'; // 대시보드 페이지 임포트
 
-const App: React.FC = () => {
+function App() {
   return (
-    <div className="App">
-      {/* AppRouter 컴포넌트를 렌더링하여 라우팅 설정을 적용합니다. */}
-      <AppRouter />
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/" element={<LoginPage />} /> 
+      </Routes>
+    </Router>
   );
-};
+}
 
 export default App;

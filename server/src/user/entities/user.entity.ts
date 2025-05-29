@@ -1,26 +1,31 @@
 // server/src/user/entities/user.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-@Entity('users')
+@Entity()
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true, nullable: false })
-  username: string; // 아이디
+  @Column({ unique: true })
+  username: string;
 
-  @Column({ nullable: false })
-  name: string; // 이름 추가
+  @Column()
+  name: string;
 
-  @Column({ nullable: false })
-  password: string;
+  @Column()
+  password: string; // 해싱된 비밀번호
 
-  @Column({ unique: true, nullable: false })
-  phoneNumber: string; // 전화번호 추가 (중복 방지를 위해 unique 설정 고려)
+  @Column({ unique: true })
+  email: string;
 
-  @Column({ unique: true, nullable: false })
-  email: string; // 이메일 추가 (중복 방지를 위해 unique 설정 고려)
+  @Column({ unique: true, nullable: true })
+  phoneNumber: string;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @CreateDateColumn() // 👈 생성일자 자동 기록
   createdAt: Date;
+
+  @UpdateDateColumn() // 👈 업데이트 일자 자동 기록
+  updatedAt: Date;
+
+  // 기타 필요한 필드 추가 가능
 }
