@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchCurrentUser } from "../../api/auth";
 import SendTokenForm from "../../components/wallet/SendTokenForm";
-import Modal from "../..///components/common/Modal";
+import Modal from "../../components/common/Modal"; // 경로 확인: ..///components -> ../../components
 import ReceiveTokenModal from "../../components/wallet/ReceiveTokenModal";
 import { fetchTransactions, Transaction } from "../../api/wallet";
 
@@ -29,8 +29,9 @@ const DashboardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false); // ✨ Profile 모달 상태 추가
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [transactionsLoading, setTransactionsLoading] = useState(false); // ✨ 초기값 false로 변경
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [transactionsError, setTransactionsError] = useState<string | null>(
     null
   );
@@ -48,15 +49,14 @@ const DashboardPage: React.FC = () => {
       return;
     }
 
-    setLoading(true); // 데이터 로드 시작 시 로딩 상태 설정
-    setError(null); // 이전 에러 초기화
+    setLoading(true);
+    setError(null);
 
     try {
       const userAndWalletData: ExtendedUserInfo = await fetchCurrentUser();
       setCurrentUser(userAndWalletData);
-      // 사용자 데이터 로드 성공 시 바로 거래 내역도 로드
       if (userAndWalletData.walletAddress) {
-        await loadTransactions(userAndWalletData.walletAddress); // ✨ 성공 시 거래 내역도 바로 로드
+        await loadTransactions(userAndWalletData.walletAddress);
       }
     } catch (err: any) {
       console.error("Failed to fetch user data or wallet balances:", err);
@@ -91,12 +91,8 @@ const DashboardPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // ✨ 컴포넌트 마운트 시 최초 1회만 사용자 데이터와 거래 내역 로드
     loadUserData();
-  }, [loadUserData]); // loadUserData가 변경될 때마다 재실행 (useCallback 덕분에 안정적)
-
-  // ✨ 주기적인 업데이트 관련 useEffect 블록 전체 제거 ✨
-  // (이전 코드에서 currentUser, loadUserData, loadTransactions를 의존성으로 가졌던 useEffect)
+  }, [loadUserData]);
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
@@ -104,16 +100,18 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleTransactionSuccess = useCallback(() => {
-    loadUserData(); // 사용자 데이터 (잔액) 새로고침
-    setIsSendModalOpen(false); // 모달 닫기
-    // 송금 성공 후 거래 내역도 새로고침은 loadUserData 내부에서 처리됨
-  }, [loadUserData]); // currentUser, loadTransactions 제거
+    loadUserData(); // 잔액과 거래 내역 모두 새로고침
+    setIsSendModalOpen(false); // 송금 모달 닫기
+  }, [loadUserData]);
 
   const openSendModal = () => setIsSendModalOpen(true);
   const closeSendModal = () => setIsSendModalOpen(false);
 
   const openReceiveModal = () => setIsReceiveModalOpen(true);
   const closeReceiveModal = () => setIsReceiveModalOpen(false);
+
+  const openProfileModal = () => setIsProfileModalOpen(true); // ✨ Profile 모달 열기 함수
+  const closeProfileModal = () => setIsProfileModalOpen(false); // ✨ Profile 모달 닫기 함수
 
   if (loading) {
     return (
@@ -160,46 +158,53 @@ const DashboardPage: React.FC = () => {
 
   const ethValue =
     parseFloat(formattedEthBalance) * (currentUser.ethPriceUsd || 0);
-  const jkValue = parseFloat(formattedCustomTokenBalance.replace(/,/g, "")) * 0;
+  // JK 토큰의 USD 가치가 0으로 설정되어 있으므로, 실제 가치 계산 로직 필요 시 수정하세요.
+  const jkValue = parseFloat(formattedCustomTokenBalance.replace(/,/g, "")) * 0; 
   const totalAssetValue = (ethValue + jkValue).toFixed(4);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-8">
-      <h1 className="text-5xl font-bold mb-12">MY WALLET</h1>
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
-        <h2 className="text-3xl font-semibold mb-4">
-          환영합니다, {currentUser.name}!
-        </h2>
-        <p className="text-xl text-gray-400">아이디: {currentUser.username}</p>
-        <p className="text-xl text-gray-400">이메일: {currentUser.email}</p>
-        {currentUser.phoneNumber && (
-          <p className="text-xl text-gray-400">
-            전화번호: {currentUser.phoneNumber}
-          </p>
-        )}
+      {/* ✨ 1. 헤더 섹션 (스크롤 시 함께 이동) ✨ */}
+      <div className="w-full max-w-2xl flex justify-between items-center mb-8">
+        <h1 className="text-4xl font-bold text-white">MY WALLET</h1>
+        <div className="flex space-x-4">
+          <button
+            onClick={openProfileModal}
+            className="px-5 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 text-white font-semibold shadow-md transition-colors duration-200"
+          >
+            Profile
+          </button>
+          <button
+            onClick={handleLogout}
+            className="px-5 py-2 bg-red-600 rounded-lg hover:bg-red-700 text-white font-semibold shadow-md transition-colors duration-200"
+          >
+            로그아웃
+          </button>
+        </div>
+      </div>
 
-        <div className="mt-6">
-          <h3 className="text-2xl font-medium mb-2">나의 지갑 주소:</h3>
-          <div className="bg-gray-700 p-4 rounded-md flex justify-between items-center break-words">
-            <span className="font-mono text-lg text-green-400 select-all">
-              {currentUser.walletAddress || "지갑 주소 로딩 중..."}
-            </span>
-            {currentUser.walletAddress && (
-              <button
-                onClick={() => handleCopyAddress(currentUser.walletAddress)}
-                className="ml-4 px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-700 text-white font-semibold"
-              >
-                복사
-              </button>
-            )}
-          </div>
+      {/* ✨ 2. 메인 콘텐츠 섹션 ✨ */}
+      {/* 사용자 정보 블록 제거됨 (Profile 모달로 이동) */}
+
+      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
+        <h3 className="text-2xl font-medium mb-2">나의 지갑 주소:</h3>
+        <div className="bg-gray-700 p-4 rounded-md flex justify-between items-center break-words">
+          <span className="font-mono text-lg text-green-400 select-all break-all">
+            {currentUser.walletAddress || "지갑 주소 로딩 중..."}
+          </span>
+          {currentUser.walletAddress && (
+            <button
+              onClick={() => handleCopyAddress(currentUser.walletAddress)}
+              className="ml-4 px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-700 text-white font-semibold flex-shrink-0"
+            >
+              복사
+            </button>
+          )}
         </div>
       </div>
 
       <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
         <h2 className="text-3xl font-semibold mb-6">자산 현황</h2>
-        {/* 잔액 로딩은 이제 loadUserData의 loading 상태가 처리합니다. */}
-        {/* 거래 내역 로딩 인디케이터만 남겨둡니다. */}
         {loading && (
           <p className="text-gray-400 text-center mb-4">잔액 업데이트 중...</p>
         )}
@@ -226,73 +231,10 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
-        <h2 className="text-3xl font-semibold mb-6">지갑 기능</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <button
-            className="flex flex-col items-center justify-center p-6 bg-indigo-700 rounded-lg shadow-md hover:bg-indigo-800 transition-colors duration-200"
-            onClick={openSendModal}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-12 w-12 mb-2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-              />
-            </svg>
-            <span className="text-xl font-semibold">송금</span>
-          </button>
-
-          <button
-            className="flex flex-col items-center justify-center p-6 bg-green-700 rounded-lg shadow-md hover:bg-green-800 transition-colors duration-200"
-            onClick={openReceiveModal}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-12 w-12 mb-2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2m-4-1v8m0 0l3-3m-3 3L9 8m-5 3h12a2 2 0 012 2v4m-4-11v11.75m0 0a1.75 1.75 0 01-3.5 0V13.75m0 0a1.75 1.75 0 00-3.5 0V4"
-              />
-            </svg>
-            <span className="text-xl font-semibold">수신</span>
-          </button>
-
-          <button className="flex flex-col items-center justify-center p-6 bg-purple-700 rounded-lg shadow-md hover:bg-purple-800 transition-colors duration-200">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-12 w-12 mb-2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-              />
-            </svg>
-            <span className="text-xl font-semibold">교환 (준비 중)</span>
-          </button>
-        </div>
-      </div>
+      {/* 기존 "지갑 기능" div 제거됨 (하단 네비게이션으로 이동) */}
 
       {/* 거래 내역 */}
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
+      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-24"> {/* ✨ 하단 고정바를 위해 mb-24 추가 ✨ */}
         <h2 className="text-3xl font-semibold mb-6">최근 거래 내역</h2>
         {transactionsLoading ? (
           <p className="text-gray-400 text-center">
@@ -359,28 +301,121 @@ const DashboardPage: React.FC = () => {
         )}
       </div>
 
-      {/* 로그아웃 버튼 */}
-      <button
-        onClick={handleLogout}
-        className="mt-8 px-6 py-3 bg-red-600 rounded-lg hover:bg-red-700 text-white font-semibold shadow-md transition-colors duration-200"
-      >
-        로그아웃
-      </button>
+      {/* 기존 로그아웃 버튼 제거됨 (헤더로 이동) */}
 
-      {/* 송금 모달 렌더링 */}
-      {currentUser.walletAddress && (
-        <Modal isOpen={isSendModalOpen} onClose={closeSendModal}>
-          <SendTokenForm
-            onTransactionSuccess={handleTransactionSuccess}
-            userWalletAddress={currentUser.walletAddress}
-          />
-        </Modal>
-      )}
+      {/* ✨ 3. 하단 네비게이션 섹션 (하단 고정) ✨ */}
+      <nav className="fixed bottom-0 left-0 w-full bg-gray-800 p-4 shadow-xl z-20">
+        <div className="flex justify-around items-center">
+          <button
+            className="flex flex-col items-center justify-center p-3 bg-indigo-700 rounded-lg shadow-md hover:bg-indigo-800 transition-colors duration-200"
+            onClick={openSendModal}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+              />
+            </svg>
+            <span className="text-sm font-semibold mt-1">송금</span>
+          </button>
 
+          <button
+            className="flex flex-col items-center justify-center p-3 bg-green-700 rounded-lg shadow-md hover:bg-green-800 transition-colors duration-200"
+            onClick={openReceiveModal}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2m-4-1v8m0 0l3-3m-3 3L9 8m-5 3h12a2 2 0 012 2v4m-4-11v11.75m0 0a1.75 1.75 0 01-3.5 0V13.75m0 0a1.75 1.75 0 00-3.5 0V4"
+              />
+            </svg>
+            <span className="text-sm font-semibold mt-1">수신</span>
+          </button>
+
+          <button className="flex flex-col items-center justify-center p-3 bg-purple-700 rounded-lg shadow-md hover:bg-purple-800 transition-colors duration-200">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+              />
+            </svg>
+            <span className="text-sm font-semibold mt-1">교환</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* 모달 렌더링 */}
       {currentUser.walletAddress && (
-        <Modal isOpen={isReceiveModalOpen} onClose={closeReceiveModal}>
-          <ReceiveTokenModal userWalletAddress={currentUser.walletAddress} />
-        </Modal>
+        <>
+          <Modal isOpen={isSendModalOpen} onClose={closeSendModal}>
+            <SendTokenForm
+              onTransactionSuccess={handleTransactionSuccess}
+              userWalletAddress={currentUser.walletAddress}
+            />
+          </Modal>
+
+          <Modal isOpen={isReceiveModalOpen} onClose={closeReceiveModal}>
+            <ReceiveTokenModal userWalletAddress={currentUser.walletAddress} />
+          </Modal>
+
+          {/* ✨ Profile 모달 ✨ */}
+          <Modal isOpen={isProfileModalOpen} onClose={closeProfileModal}>
+            <div className="p-8 bg-gray-700 rounded-lg text-white max-w-md mx-auto">
+              <h2 className="text-3xl font-semibold mb-4 text-center">내 프로필</h2>
+              <div className="space-y-3">
+                <p className="text-xl text-gray-300">
+                  <span className="font-medium">아이디:</span> {currentUser.username}
+                </p>
+                <p className="text-xl text-gray-300">
+                  <span className="font-medium">이름:</span> {currentUser.name}
+                </p>
+                <p className="text-xl text-gray-300">
+                  <span className="font-medium">이메일:</span> {currentUser.email}
+                </p>
+                {currentUser.phoneNumber && (
+                  <p className="text-xl text-gray-300">
+                    <span className="font-medium">전화번호:</span> {currentUser.phoneNumber}
+                  </p>
+                )}
+                {currentUser.createdAt && (
+                  <p className="text-lg text-gray-400 pt-4 border-t border-gray-600">
+                    계정 생성일: {new Date(currentUser.createdAt).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={closeProfileModal}
+                className="mt-6 w-full py-3 bg-red-600 rounded-lg hover:bg-red-700 text-white font-semibold shadow-md transition-colors duration-200"
+              >
+                닫기
+              </button>
+            </div>
+          </Modal>
+        </>
       )}
     </div>
   );
