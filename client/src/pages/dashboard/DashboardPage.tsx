@@ -5,12 +5,12 @@ import { useNavigate } from 'react-router-dom';
 import { fetchCurrentUser } from '../../api/auth';
 import { ethers } from 'ethers'; 
 
-// ✨ SendTokenForm 임포트 유지
+// SendTokenForm 임포트 유지
 import SendTokenForm from '../../components/wallet/SendTokenForm'; 
-// ✨ Modal 컴포넌트를 만들거나 임포트합니다.
-// 여기서는 간단한 모달을 직접 구현하거나, common 폴더에 Modal.tsx를 만들었다고 가정합니다.
-// 만약 Modal 컴포넌트가 없다면, 아래 Modal 컴포넌트 코드를 참고하여 생성해주세요.
+// Modal 컴포넌트 임포트 유지
 import Modal from '../../components/common/Modal'; 
+// ✨ ReceiveTokenModal 임포트 추가
+import ReceiveTokenModal from '../../components/wallet/ReceiveTokenModal';
 
 interface ExtendedUserInfo {
   id: string;
@@ -31,8 +31,9 @@ const DashboardPage: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<ExtendedUserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // ✨ 모달 상태 추가
   const [isSendModalOpen, setIsSendModalOpen] = useState(false); 
+  // ✨ 수신 모달 상태 추가
+  const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
 
   const handleCopyAddress = useCallback((address: string) => {
     navigator.clipboard.writeText(address);
@@ -65,9 +66,9 @@ const DashboardPage: React.FC = () => {
 
     const intervalId = setInterval(() => {
     loadUserData(); // 30초마다 업데이트
-    }, 30000); // 30초 = 30000 밀리초
+    }, 30000); 
 
-    return () => clearInterval(intervalId); // 컴포넌트 언마운트 시 인터벌 해제
+    return () => clearInterval(intervalId); 
   }, [loadUserData]);
 
   const handleLogout = () => {
@@ -75,15 +76,19 @@ const DashboardPage: React.FC = () => {
     navigate('/login');
   };
 
-  // ✨ 트랜잭션 성공 시 대시보드 데이터를 새로고침하고 모달 닫기
   const handleTransactionSuccess = useCallback(() => {
-    loadUserData(); // 최신 잔액 정보 다시 불러오기
-    setIsSendModalOpen(false); // 송금 성공 후 모달 닫기
+    loadUserData(); 
+    setIsSendModalOpen(false); 
   }, [loadUserData]); 
 
-  // ✨ 모달 열기/닫기 핸들러
+  // 모달 열기/닫기 핸들러 (송금)
   const openSendModal = () => setIsSendModalOpen(true);
   const closeSendModal = () => setIsSendModalOpen(false);
+
+  // ✨ 모달 열기/닫기 핸들러 (수신)
+  const openReceiveModal = () => setIsReceiveModalOpen(true);
+  const closeReceiveModal = () => setIsReceiveModalOpen(false);
+
 
   if (loading) {
     return (
@@ -180,36 +185,32 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ✨ SendTokenForm 컴포넌트 렌더링 위치 변경: 이제 모달 내부에 들어갑니다. */}
-      {/* 기존에 바로 렌더링되던 SendTokenForm은 여기서 제거됩니다. */}
-      {/* {currentUser.walletAddress && ( 
-        <SendTokenForm 
-          onTransactionSuccess={handleTransactionSuccess} 
-          userWalletAddress={currentUser.walletAddress} 
-        />
-      )} */}
-
-      {/* 주요 기능 버튼 섹션 - 송금 버튼 클릭 시 모달 열기 */}
+      {/* 주요 기능 버튼 섹션 - 송금/수신 버튼 클릭 시 모달 열기 */}
       <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
         <h2 className="text-3xl font-semibold mb-6">지갑 기능</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* ✨ 송금 버튼 클릭 시 모달 열기 */}
+          {/* 송금 버튼 */}
           <button 
             className="flex flex-col items-center justify-center p-6 bg-indigo-700 rounded-lg shadow-md hover:bg-indigo-800 transition-colors duration-200"
-            onClick={openSendModal} // 모달 열기 함수 연결
+            onClick={openSendModal} 
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
-            <span className="text-xl font-semibold">송금</span> {/* "폼 이용" 문구 제거 */}
+            <span className="text-xl font-semibold">송금</span> 
           </button>
           
-          <button className="flex flex-col items-center justify-center p-6 bg-green-700 rounded-lg shadow-md hover:bg-green-800 transition-colors duration-200">
+          {/* ✨ 수신 버튼 클릭 시 모달 열기 */}
+          <button 
+            className="flex flex-col items-center justify-center p-6 bg-green-700 rounded-lg shadow-md hover:bg-green-800 transition-colors duration-200"
+            onClick={openReceiveModal} // 수신 모달 열기 함수 연결
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2m-4-1v8m0 0l3-3m-3 3L9 8m-5 3h12a2 2 0 012 2v4m-4-11v11.75m0 0a1.75 1.75 0 01-3.5 0V13.75m0 0a1.75 1.75 0 00-3.5 0V4" />
             </svg>
-            <span className="text-xl font-semibold">수신 (준비 중)</span>
+            <span className="text-xl font-semibold">수신</span> {/* "준비 중" 문구 제거 */}
           </button>
+          
           <button className="flex flex-col items-center justify-center p-6 bg-purple-700 rounded-lg shadow-md hover:bg-purple-800 transition-colors duration-200">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
@@ -233,11 +234,20 @@ const DashboardPage: React.FC = () => {
         로그아웃
       </button>
 
-      {/* ✨ 송금 모달 렌더링 */}
+      {/* 송금 모달 렌더링 (변경 없음) */}
       {currentUser.walletAddress && (
         <Modal isOpen={isSendModalOpen} onClose={closeSendModal}>
           <SendTokenForm 
             onTransactionSuccess={handleTransactionSuccess} 
+            userWalletAddress={currentUser.walletAddress} 
+          />
+        </Modal>
+      )}
+
+      {/* ✨ 수신 모달 렌더링 */}
+      {currentUser.walletAddress && (
+        <Modal isOpen={isReceiveModalOpen} onClose={closeReceiveModal}>
+          <ReceiveTokenModal 
             userWalletAddress={currentUser.walletAddress} 
           />
         </Modal>
