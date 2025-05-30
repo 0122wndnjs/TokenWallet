@@ -1,18 +1,20 @@
-// server/src/user/user.module.ts
-import { Module } from '@nestjs/common';
+// TokenWallet/server/src/user/user.module.ts
+import { Module, forwardRef } from '@nestjs/common'; // ✨ forwardRef 임포트
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { User } from './entities/user.entity';
-import { WalletModule } from '../wallet/wallet.module'; // 💡 WalletModule 임포트
+import { WalletModule } from '../wallet/wallet.module';
+import { PriceModule } from 'src/price/price.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]), // User 엔티티를 이 모듈에서 사용하도록 등록
-    WalletModule, // 💡 WalletModule을 imports에 추가
+    TypeOrmModule.forFeature([User]),
+    forwardRef(() => WalletModule), // ✨ WalletModule 임포트에 forwardRef 적용
+    PriceModule
   ],
   controllers: [UserController],
   providers: [UserService],
-  exports: [UserService], // AuthService에서 UserService를 사용하므로 export 해야 합니다.
+  exports: [UserService],
 })
 export class UserModule {}

@@ -3,17 +3,27 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchCurrentUser } from '../../api/auth';
-import { fetchWalletBalances } from '../../api/walletApi';
-import { UserInfo, WalletBalances } from '../../types/auth';
-import { ethers } from 'ethers';
+import { ethers } from 'ethers'; 
+import { current } from '@reduxjs/toolkit';
 
-// import SendTokenForm from '../../components/Wallet/SendTokenForm';
-// import TransactionHistory from '../../components/Wallet/TransactionHistory';
+// ExtendedUserInfo 인터페이스에 ethPriceUsd 추가
+interface ExtendedUserInfo {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  phoneNumber?: string;
+  walletAddress: string;
+  customTokenBalance: string;
+  ethBalance: string;
+  createdAt?: string;
+  updatedAt?: string;
+  ethPriceUsd: number; // ✨ 추가: ETH의 현재 USD 가격
+}
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<UserInfo | null>(null);
-  const [walletBalances, setWalletBalances] = useState<WalletBalances | null>(null);
+  const [currentUser, setCurrentUser] = useState<ExtendedUserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +32,7 @@ const DashboardPage: React.FC = () => {
     alert('지갑 주소가 클립보드에 복사되었습니다!');
   }, []);
 
-  const loadUserDataAndWallet = useCallback(async () => {
+  const loadUserData = useCallback(async () => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
       navigate('/login');
@@ -30,11 +40,9 @@ const DashboardPage: React.FC = () => {
     }
 
     try {
-      const user = await fetchCurrentUser();
-      setCurrentUser(user);
-
-      const balances = await fetchWalletBalances();
-      setWalletBalances(balances);
+      // fetchCurrentUser가 ethPriceUsd를 포함하여 반환합니다.
+      const userAndWalletData: ExtendedUserInfo = await fetchCurrentUser(); 
+      setCurrentUser(userAndWalletData);
 
     } catch (err: any) {
       console.error("Failed to fetch user data or wallet balances:", err);
@@ -47,8 +55,14 @@ const DashboardPage: React.FC = () => {
   }, [navigate]);
 
   useEffect(() => {
-    loadUserDataAndWallet();
-  }, [loadUserDataAndWallet]);
+    loadUserData();
+
+    const intervalId = setInterval(() => {
+    loadUserData(); // 30초마다 업데이트
+  }, 30000); // 30초 = 30000 밀리초
+
+  return () => clearInterval(intervalId); // 컴포넌트 언마운트 시 인터벌 해제
+  }, [loadUserData]);
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
@@ -74,43 +88,58 @@ const DashboardPage: React.FC = () => {
     );
   }
 
-  // 💡 지갑 주소를 짧게 표시하는 헬퍼 함수는 이제 필요 없으므로 제거하거나 주석 처리합니다.
-  // const shortenAddress = (address: string | undefined) => {
-  //   if (!address) return 'N/A';
-  //   return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-  // };
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-4">
+        <p>사용자 정보를 불러올 수 없습니다. 다시 시도해주세요.</p>
+        <button onClick={loadUserData} className="mt-4 px-6 py-3 bg-blue-500 rounded hover:bg-blue-600 text-white font-semibold shadow-md">
+          다시 시도
+        </button>
+      </div>
+    );
+  }
+
+  const formattedEthBalance = parseFloat(ethers.formatEther(currentUser.ethBalance || '0')).toFixed(4);
+  const rawCustomTokenBalance = parseFloat(ethers.formatEther(currentUser.customTokenBalance || '0'));
+  const formattedCustomTokenBalance = rawCustomTokenBalance.toLocaleString(); 
+
+  // ✨ ETH 가격에 currentUser.ethPriceUsd 사용
+  // JK 토큰은 현재 시장 가격이 없으므로 임시로 1달러로 고정하거나 0으로 처리할 수 있습니다.
+  // 여기서는 1달러로 유지합니다.
+  const ethValue = parseFloat(formattedEthBalance) * currentUser.ethPriceUsd; 
+  console.log(currentUser.ethPriceUsd, "ETH Price in USD"); // 디버깅용 로그
+  const jkValue = rawCustomTokenBalance * 0; // JK 토큰은 현재 $0로 고정
+  const totalAssetValue = (ethValue + jkValue).toFixed(4);
+
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-8">
       <h1 className="text-5xl font-bold mb-12">지갑 대시보드</h1>
 
       {/* 사용자 정보 섹션 */}
-      {currentUser && (
-        <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
-          <h2 className="text-3xl font-semibold mb-4">환영합니다, {currentUser.name}!</h2>
-          <p className="text-xl text-gray-400">아이디: {currentUser.username}</p>
-          <p className="text-xl text-gray-400">이메일: {currentUser.email}</p>
-          {currentUser.phoneNumber && <p className="text-xl text-gray-400">전화번호: {currentUser.phoneNumber}</p>}
+      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
+        <h2 className="text-3xl font-semibold mb-4">환영합니다, {currentUser.name}!</h2>
+        <p className="text-xl text-gray-400">아이디: {currentUser.username}</p>
+        <p className="text-xl text-gray-400">이메일: {currentUser.email}</p>
+        {currentUser.phoneNumber && <p className="text-xl text-gray-400">전화번호: {currentUser.phoneNumber}</p>}
 
-          <div className="mt-6">
-            <h3 className="text-2xl font-medium mb-2">나의 지갑 주소:</h3>
-            <div className="bg-gray-700 p-4 rounded-md flex justify-between items-center break-words">
-              {/* 💡 shortenAddress 함수 호출 대신, 전체 walletBalances.walletAddress를 직접 표시합니다. */}
-              <span className="font-mono text-lg text-green-400 select-all">
-                {walletBalances?.walletAddress || '지갑 주소 로딩 중...'}
-              </span>
-              {walletBalances?.walletAddress && (
-                <button
-                  onClick={() => handleCopyAddress(walletBalances.walletAddress)}
-                  className="ml-4 px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-700 text-white font-semibold"
-                >
-                  복사
-                </button>
-              )}
-            </div>
+        <div className="mt-6">
+          <h3 className="text-2xl font-medium mb-2">나의 지갑 주소:</h3>
+          <div className="bg-gray-700 p-4 rounded-md flex justify-between items-center break-words">
+            <span className="font-mono text-lg text-green-400 select-all">
+              {currentUser.walletAddress || '지갑 주소 로딩 중...'}
+            </span>
+            {currentUser.walletAddress && (
+              <button
+                onClick={() => handleCopyAddress(currentUser.walletAddress)}
+                className="ml-4 px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-700 text-white font-semibold"
+              >
+                복사
+              </button>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       {/* 자산 현황 섹션 */}
       <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
@@ -118,8 +147,7 @@ const DashboardPage: React.FC = () => {
         <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
           <span className="text-xl font-medium">총 자산 가치:</span>
           <span className="text-2xl font-bold text-green-400">
-            {walletBalances ? `$${(parseFloat(ethers.formatEther(walletBalances.ethBalance || '0')) * 2000 + parseFloat(walletBalances.customTokenBalance || '0') * 1).toFixed(2)}` : '$0.00'}
-            {/* ETH 1개당 $2000, 커스텀 토큰 1개당 $1 가정 (실제 시세 연동 필요) */}
+            {`$${totalAssetValue}`}
           </span>
         </div>
         <div>
@@ -127,19 +155,19 @@ const DashboardPage: React.FC = () => {
           <div className="flex justify-between items-center p-3 mb-2 bg-gray-700 rounded-md">
             <span className="text-lg">Ethereum (ETH)</span>
             <span className="text-lg font-bold">
-              {walletBalances ? `${parseFloat(ethers.formatEther(walletBalances.ethBalance || '0')).toFixed(4)} ETH` : '0.0000 ETH'}
+              {`${formattedEthBalance} ETH`}
             </span>
           </div>
           <div className="flex justify-between items-center p-3 bg-gray-700 rounded-md">
-            <span className="text-lg">Token (TW)</span>
+            <span className="text-lg">Token (JK)</span>
             <span className="text-lg font-bold">
-              {walletBalances ? `${parseFloat(walletBalances.customTokenBalance || '0').toFixed(2)} TW` : '0.00 TW'}
+              {`${formattedCustomTokenBalance} JK`}
             </span>
           </div>
         </div>
       </div>
 
-      {/* 💡 임시로 송금 섹션 제거 */}
+      {/* 💡 임시로 송금 섹션 제거 (주석 처리된 컴포넌트들) */}
       {/* <SendTokenForm /> */}
 
       {/* 주요 기능 버튼 섹션 - 송금, 수신, 교환 버튼은 그대로 둡니다. (클릭 시 동작 없음) */}

@@ -1,4 +1,4 @@
-// server/src/user/entities/user.entity.ts
+// TokenWallet/server/src/user/entities/user.entity.ts
 import {
   Entity,
   Column,
@@ -37,7 +37,8 @@ export class User {
   @Column({ unique: true, nullable: true })
   walletAddress: string;
 
-  // 💡 암호화된 개인 키 필드 추가 (DB에는 암호화된 형태로만 저장해야 합니다!)
-  @Column({ nullable: true })
-  encryptedPrivateKey: string; //⚠️ 보안: 실제 프로덕션에서는 개인 키를 DB에 평문으로 저장하면 절대 안 됩니다. 암호화 필수!
+  // ✨ 추가: 암호화된 개인 키 필드
+  // @Column({ nullable: true, select: false }) // ⚠️ 중요: select: false 를 통해 API 응답에서 자동으로 제외되도록 합니다.
+  @Column({ nullable: true, select: false }) 
+  encryptedPrivateKey: string; //⚠️ 보안: 실제 개인 키는 DB에 평문으로 저장하면 절대 안 됩니다. 반드시 암호화해야 합니다!
 }

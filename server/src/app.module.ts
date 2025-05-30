@@ -8,6 +8,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config'; // ConfigModule �
 import { UserModule } from './user/user.module'; // UserModule 임포트
 import { User } from './user/entities/user.entity'; // User 엔티티 임포트
 import { WalletModule } from './wallet/wallet.module';
+import { PriceModule } from './price/price.module';
 
 @Module({
   imports: [
@@ -31,7 +32,8 @@ import { WalletModule } from './wallet/wallet.module';
     }),
     AuthModule,
     UserModule,
-    WalletModule, // UserModule 임포트
+    WalletModule,
+    PriceModule, // UserModule 임포트
     // WalletModule 등 다른 모듈들도 여기에 추가
   ],
   controllers: [AppController],

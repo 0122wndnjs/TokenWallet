@@ -12,7 +12,7 @@ import { WalletBalances } from '../types/auth'; // 또는 src/types/wallet.ts에
  */
 export const fetchWalletBalances = async (): Promise<WalletBalances> => {
   try {
-    const response = await axiosClient.get<WalletBalances>('/users/me/wallet');
+    const response = await axiosClient.get<WalletBalances>('/users/me');
     return response.data;
   } catch (error) {
     console.error("Fetch wallet balances API error:", error);

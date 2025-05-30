@@ -1,5 +1,5 @@
 // server/src/auth/auth.module.ts
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common'; // ✨ forwardRef 임포트 확인
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
@@ -7,7 +7,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UserModule } from '../user/user.module';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
-import { WalletModule } from '../wallet/wallet.module'; // 💡 WalletModule 임포트
+import { WalletModule } from '../wallet/wallet.module'; // WalletModule 임포트
 
 @Module({
   imports: [
@@ -22,9 +22,9 @@ import { WalletModule } from '../wallet/wallet.module'; // 💡 WalletModule 임
       }),
       inject: [ConfigService],
     }),
-    UserModule,
+    UserModule, // AuthModule이 UserModule을 임포트합니다.
     PassportModule,
-    WalletModule, // 💡 WalletModule을 imports에 추가
+    forwardRef(() => WalletModule), // ✨ WalletModule 임포트에 forwardRef 적용
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
