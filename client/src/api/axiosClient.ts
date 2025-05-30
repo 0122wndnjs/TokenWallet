@@ -13,7 +13,7 @@ const axiosClient = axios.create({
   headers: {
     'Content-Type': 'application/json', // 기본적으로 JSON 형식으로 데이터를 보냅니다.
   },
-  timeout: 10000, // 요청 타임아웃 10초 설정 (선택 사항)
+  timeout: 30000, // 요청 타임아웃 10초 설정 (선택 사항)
 });
 
 // --- 요청 인터셉터 설정 ---

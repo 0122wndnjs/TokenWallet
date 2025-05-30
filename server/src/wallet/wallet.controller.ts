@@ -1,64 +1,77 @@
-// TokenWallet/server/src/wallet/wallet.controller.ts
-import { Controller, Get, Post, Body, UseGuards, Request, HttpStatus, HttpCode, InternalServerErrorException } from '@nestjs/common'; // InternalServerErrorException 추가
+// src/wallet/wallet.controller.ts
+import { 
+  Controller, 
+  Post, 
+  Get, 
+  Body, 
+  UseGuards, 
+  Request, 
+  HttpStatus,
+  BadRequestException, // ✨ 추가: BadRequestException 임포트
+  InternalServerErrorException // ✨ 추가: WalletService에서 throw할 수 있는 예외도 임포트해두는 것이 좋습니다.
+} from '@nestjs/common';
 import { WalletService } from './wallet.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { SendTokenDto } from './dto/send-token.dto';
-import { User as UserEntity } from '../user/entities/user.entity';
-import { UserService } from '../user/user.service'; // ✨ UserService 임포트
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'; 
+import { SendTokenDto } from './dto/send-token.dto'; 
+import { User } from '../user/entities/user.entity'; // User 엔티티 임포트
+
+// ✨ 추가: req 객체의 타입을 정의하는 인터페이스
+// NestJS의 기본 Request 타입에 user 속성을 추가합니다.
+interface CustomRequest extends Request {
+  user: User; // JwtAuthGuard가 req.user에 User 엔티티를 주입한다고 가정합니다.
+}
 
 @Controller('wallet')
-@UseGuards(JwtAuthGuard)
 export class WalletController {
-  constructor(
-    private readonly walletService: WalletService,
-    private readonly userService: UserService, // ✨ UserService 주입
-  ) {}
+  constructor(private readonly walletService: WalletService) {}
 
-  @Get('balances')
-  async getBalances(@Request() req: any) {
-    const user: UserEntity = req.user;
-    if (!user || !user.walletAddress) {
-      throw new Error('User or wallet address not found');
-    }
-    const { customTokenBalance, ethBalance } = await this.walletService.getBalances(user.walletAddress);
-    return {
-      walletAddress: user.walletAddress,
-      customTokenBalance,
-      ethBalance,
-    };
-  }
-
+  @UseGuards(JwtAuthGuard) // JWT 인증 가드 적용
   @Post('send-token')
-  @HttpCode(HttpStatus.OK)
-  async sendToken(@Request() req: any, @Body() sendTokenDto: SendTokenDto) {
-    const userId: string = req.user.id; // 인증된 사용자 ID 가져오기
-
-    // 1. 사용자 ID를 사용하여 암호화된 개인 키를 포함한 사용자 정보 조회
-    const userWithPrivateKey = await this.userService.findUserWithPrivateKey(userId);
-
-    if (!userWithPrivateKey || !userWithPrivateKey.encryptedPrivateKey) {
-      // 이 경우는 매우 드물게 발생해야 하지만, 방어적으로 처리합니다.
-      throw new InternalServerErrorException('User private key not found or accessible.');
-    }
-
+  // ✨ req 파라미터에 CustomRequest 타입을 명시합니다.
+  async sendToken(@Request() req: CustomRequest, @Body() sendTokenDto: SendTokenDto) {
+    const user: User = req.user; // 이제 req.user는 User 타입으로 인식됩니다.
     const { toAddress, amount } = sendTokenDto;
 
+    if (!user.encryptedPrivateKey) {
+      throw new BadRequestException('사용자의 개인 키가 없습니다. 지갑 생성 또는 로그인에 문제가 있을 수 있습니다.');
+    }
+
     try {
-      // 2. WalletService의 sendCustomToken 메서드에 암호화된 개인 키 전달
-      const transaction = await this.walletService.sendCustomToken(
-        userWithPrivateKey.encryptedPrivateKey, // ✨ 암호화된 개인 키 전달
+      const transactionResponse = await this.walletService.sendCustomToken(
+        user.encryptedPrivateKey, 
         toAddress,
         amount
       );
-      
       return {
-        message: 'Token sent successfully!',
-        transactionHash: transaction.hash,
+        statusCode: HttpStatus.OK,
+        message: '토큰 전송 성공',
+        transactionHash: transactionResponse.hash,
       };
-    } catch (error) {
-      // WalletService에서 던진 구체적인 예외를 여기서 다시 던집니다.
-      // NestJS의 Exception Filter가 이를 처리하여 적절한 HTTP 응답을 생성할 것입니다.
-      throw error; 
+    } catch (error: any) { // error 타입 명시 (에러 객체의 속성에 접근하기 위함)
+      console.error('토큰 전송 오류:', error.message);
+      // WalletService에서 이미 NestJS 예외를 throw했을 경우, 그대로 다시 던집니다.
+      if (error instanceof BadRequestException || error instanceof InternalServerErrorException) {
+         throw error; 
+      }
+      // 그 외 알 수 없는 오류는 InternalServerErrorException으로 처리합니다.
+      throw new InternalServerErrorException('토큰 전송 중 알 수 없는 오류가 발생했습니다.');
     }
+  }
+
+  // ✨ 기존 잔액 조회 엔드포인트
+  @UseGuards(JwtAuthGuard)
+  @Get('balances')
+  // ✨ req 파라미터에 CustomRequest 타입을 명시합니다.
+  async getBalances(@Request() req: CustomRequest) {
+    const user: User = req.user;
+    if (!user.walletAddress) {
+      throw new BadRequestException('사용자의 지갑 주소가 없습니다.');
+    }
+    const balances = await this.walletService.getBalances(user.walletAddress);
+    return {
+      statusCode: HttpStatus.OK,
+      message: '잔액 조회 성공',
+      data: balances,
+    };
   }
 }

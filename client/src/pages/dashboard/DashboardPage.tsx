@@ -4,9 +4,14 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchCurrentUser } from '../../api/auth';
 import { ethers } from 'ethers'; 
-import { current } from '@reduxjs/toolkit';
 
-// ExtendedUserInfo 인터페이스에 ethPriceUsd 추가
+// ✨ SendTokenForm 임포트 유지
+import SendTokenForm from '../../components/wallet/SendTokenForm'; 
+// ✨ Modal 컴포넌트를 만들거나 임포트합니다.
+// 여기서는 간단한 모달을 직접 구현하거나, common 폴더에 Modal.tsx를 만들었다고 가정합니다.
+// 만약 Modal 컴포넌트가 없다면, 아래 Modal 컴포넌트 코드를 참고하여 생성해주세요.
+import Modal from '../../components/common/Modal'; 
+
 interface ExtendedUserInfo {
   id: string;
   username: string;
@@ -18,7 +23,7 @@ interface ExtendedUserInfo {
   ethBalance: string;
   createdAt?: string;
   updatedAt?: string;
-  ethPriceUsd: number; // ✨ 추가: ETH의 현재 USD 가격
+  ethPriceUsd: number; 
 }
 
 const DashboardPage: React.FC = () => {
@@ -26,6 +31,8 @@ const DashboardPage: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<ExtendedUserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // ✨ 모달 상태 추가
+  const [isSendModalOpen, setIsSendModalOpen] = useState(false); 
 
   const handleCopyAddress = useCallback((address: string) => {
     navigator.clipboard.writeText(address);
@@ -40,7 +47,6 @@ const DashboardPage: React.FC = () => {
     }
 
     try {
-      // fetchCurrentUser가 ethPriceUsd를 포함하여 반환합니다.
       const userAndWalletData: ExtendedUserInfo = await fetchCurrentUser(); 
       setCurrentUser(userAndWalletData);
 
@@ -59,15 +65,25 @@ const DashboardPage: React.FC = () => {
 
     const intervalId = setInterval(() => {
     loadUserData(); // 30초마다 업데이트
-  }, 30000); // 30초 = 30000 밀리초
+    }, 30000); // 30초 = 30000 밀리초
 
-  return () => clearInterval(intervalId); // 컴포넌트 언마운트 시 인터벌 해제
+    return () => clearInterval(intervalId); // 컴포넌트 언마운트 시 인터벌 해제
   }, [loadUserData]);
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     navigate('/login');
   };
+
+  // ✨ 트랜잭션 성공 시 대시보드 데이터를 새로고침하고 모달 닫기
+  const handleTransactionSuccess = useCallback(() => {
+    loadUserData(); // 최신 잔액 정보 다시 불러오기
+    setIsSendModalOpen(false); // 송금 성공 후 모달 닫기
+  }, [loadUserData]); 
+
+  // ✨ 모달 열기/닫기 핸들러
+  const openSendModal = () => setIsSendModalOpen(true);
+  const closeSendModal = () => setIsSendModalOpen(false);
 
   if (loading) {
     return (
@@ -103,12 +119,9 @@ const DashboardPage: React.FC = () => {
   const rawCustomTokenBalance = parseFloat(ethers.formatEther(currentUser.customTokenBalance || '0'));
   const formattedCustomTokenBalance = rawCustomTokenBalance.toLocaleString(); 
 
-  // ✨ ETH 가격에 currentUser.ethPriceUsd 사용
-  // JK 토큰은 현재 시장 가격이 없으므로 임시로 1달러로 고정하거나 0으로 처리할 수 있습니다.
-  // 여기서는 1달러로 유지합니다.
   const ethValue = parseFloat(formattedEthBalance) * currentUser.ethPriceUsd; 
-  console.log(currentUser.ethPriceUsd, "ETH Price in USD"); // 디버깅용 로그
-  const jkValue = rawCustomTokenBalance * 0; // JK 토큰은 현재 $0로 고정
+  console.log(currentUser.ethPriceUsd, "ETH Price in USD"); 
+  const jkValue = rawCustomTokenBalance * 0; 
   const totalAssetValue = (ethValue + jkValue).toFixed(4);
 
 
@@ -116,7 +129,7 @@ const DashboardPage: React.FC = () => {
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-8">
       <h1 className="text-5xl font-bold mb-12">지갑 대시보드</h1>
 
-      {/* 사용자 정보 섹션 */}
+      {/* 사용자 정보 섹션 (변경 없음) */}
       <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
         <h2 className="text-3xl font-semibold mb-4">환영합니다, {currentUser.name}!</h2>
         <p className="text-xl text-gray-400">아이디: {currentUser.username}</p>
@@ -141,7 +154,7 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 자산 현황 섹션 */}
+      {/* 자산 현황 섹션 (변경 없음) */}
       <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
         <h2 className="text-3xl font-semibold mb-6">자산 현황</h2>
         <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
@@ -167,19 +180,30 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 💡 임시로 송금 섹션 제거 (주석 처리된 컴포넌트들) */}
-      {/* <SendTokenForm /> */}
+      {/* ✨ SendTokenForm 컴포넌트 렌더링 위치 변경: 이제 모달 내부에 들어갑니다. */}
+      {/* 기존에 바로 렌더링되던 SendTokenForm은 여기서 제거됩니다. */}
+      {/* {currentUser.walletAddress && ( 
+        <SendTokenForm 
+          onTransactionSuccess={handleTransactionSuccess} 
+          userWalletAddress={currentUser.walletAddress} 
+        />
+      )} */}
 
-      {/* 주요 기능 버튼 섹션 - 송금, 수신, 교환 버튼은 그대로 둡니다. (클릭 시 동작 없음) */}
+      {/* 주요 기능 버튼 섹션 - 송금 버튼 클릭 시 모달 열기 */}
       <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
         <h2 className="text-3xl font-semibold mb-6">지갑 기능</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <button className="flex flex-col items-center justify-center p-6 bg-indigo-700 rounded-lg shadow-md hover:bg-indigo-800 transition-colors duration-200">
+          {/* ✨ 송금 버튼 클릭 시 모달 열기 */}
+          <button 
+            className="flex flex-col items-center justify-center p-6 bg-indigo-700 rounded-lg shadow-md hover:bg-indigo-800 transition-colors duration-200"
+            onClick={openSendModal} // 모달 열기 함수 연결
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
-            <span className="text-xl font-semibold">송금 (준비 중)</span>
+            <span className="text-xl font-semibold">송금</span> {/* "폼 이용" 문구 제거 */}
           </button>
+          
           <button className="flex flex-col items-center justify-center p-6 bg-green-700 rounded-lg shadow-md hover:bg-green-800 transition-colors duration-200">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2m-4-1v8m0 0l3-3m-3 3L9 8m-5 3h12a2 2 0 012 2v4m-4-11v11.75m0 0a1.75 1.75 0 01-3.5 0V13.75m0 0a1.75 1.75 0 00-3.5 0V4" />
@@ -195,20 +219,29 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 💡 임시로 거래 내역 섹션 제거 */}
-      {/* <TransactionHistory /> */}
+      {/* 💡 임시로 거래 내역 섹션 제거 (변경 없음) */}
       <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl">
         <h2 className="text-3xl font-semibold mb-6">최근 거래 내역</h2>
         <p className="text-gray-400 text-center">거래 내역은 현재 준비 중입니다.</p>
       </div>
 
-      {/* 로그아웃 버튼 */}
+      {/* 로그아웃 버튼 (변경 없음) */}
       <button
         onClick={handleLogout}
         className="mt-8 px-6 py-3 bg-red-600 rounded-lg hover:bg-red-700 text-white font-semibold shadow-md transition-colors duration-200"
       >
         로그아웃
       </button>
+
+      {/* ✨ 송금 모달 렌더링 */}
+      {currentUser.walletAddress && (
+        <Modal isOpen={isSendModalOpen} onClose={closeSendModal}>
+          <SendTokenForm 
+            onTransactionSuccess={handleTransactionSuccess} 
+            userWalletAddress={currentUser.walletAddress} 
+          />
+        </Modal>
+      )}
     </div>
   );
 };
