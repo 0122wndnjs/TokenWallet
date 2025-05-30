@@ -34,7 +34,7 @@ export class UserController {
     const { customTokenBalance, ethBalance } = await this.walletService.getBalances(user.walletAddress);
 
     // ✨ ETH의 현재 USD 가격을 가져옵니다.
-    const ethPriceUsd = await this.priceService.fetchEthPriceInUsd(); // ✨ 이제 this.priceService 사용 가능
+    const ethPriceUsd = await this.priceService.getEthPriceUsd(); // ✨ 이제 this.priceService 사용 가능
 
     // 사용자 정보와 지갑 잔액 정보를 함께 반환합니다.
     return {

@@ -1,37 +1,41 @@
 // TokenWallet/server/src/wallet/wallet.service.ts
+
 import { Injectable, Logger, BadRequestException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
-import * as crypto from 'crypto'; // 암호화를 위해 Node.js의 crypto 모듈 임포트
+import * as crypto from 'crypto'; 
+import axios from 'axios'; 
 
 @Injectable()
 export class WalletService {
   private readonly logger = new Logger(WalletService.name);
   private provider: ethers.JsonRpcProvider;
   private customTokenContract: ethers.Contract;
-  private backendWallet: ethers.Wallet; // ✨ 이름 변경: 백엔드에서 토큰을 보낼 "운영" 지갑 인스턴스
-  private encryptionSecret: string; // 사용자 지갑 개인키 암호화를 위한 비밀 키
+  private backendWallet: ethers.Wallet; 
+  private encryptionSecret: string; 
+  private customTokenAddress: string;
+  private etherscanApiKey: string;
+  private etherscanApiUrlSepolia: string;
 
   constructor(private configService: ConfigService) {
-    const rpcUrl = this.configService.get<string>('ETHEREUM_RPC_URL');
-    const customTokenAddress = this.configService.get<string>('CUSTOM_TOKEN_CONTRACT_ADDRESS');
+    const rpcUrl = this.configService.get<string>('ETHEREUM_RPC_URL_SEPOLIA');
+    this.customTokenAddress = this.configService.get<string>('CUSTOM_TOKEN_CONTRACT_ADDRESS')!; 
     const backendPrivateKey = this.configService.get<string>('WALLET_PRIVATE_KEY'); 
-    // const encryptionSecretFromEnv = this.configService.get<string>('WALLET_ENCRYPTION_KEY'); 
-    const encryptionSecretFromEnv = "596dcdc67fe3bc0feaf8ba918fe5660da762396a3578d9ed8c1418a1620f1cb8"; // <-- 이 줄을 추가 (따옴표 안에 정확히)
+    const encryptionSecretFromEnv = this.configService.get<string>('WALLET_ENCRYPTION_KEY')!; 
+    this.etherscanApiKey = this.configService.get<string>('ETHERSCAN_API_KEY')!; 
+    this.etherscanApiUrlSepolia = this.configService.get<string>('ETHERSCAN_API_URL_SEPOLIA')!; 
 
-    // 필수 환경 변수가 모두 존재하는지 확인
-    if (!rpcUrl || !customTokenAddress || !backendPrivateKey || !encryptionSecretFromEnv) {
-      this.logger.error('Missing required Ethereum/Wallet configuration in .env. Please check ETHEREUM_RPC_URL, CUSTOM_TOKEN_CONTRACT_ADDRESS, WALLET_PRIVATE_KEY, WALLET_ENCRYPTION_KEY.');
+    if (!rpcUrl || !this.customTokenAddress || !backendPrivateKey || !encryptionSecretFromEnv || !this.etherscanApiKey || !this.etherscanApiUrlSepolia) {
+      this.logger.error('WalletService: Missing required Ethereum/Wallet configuration in .env. Please check ETHEREUM_RPC_URL_SEPOLIA, CUSTOM_TOKEN_CONTRACT_ADDRESS, WALLET_PRIVATE_KEY, WALLET_ENCRYPTION_KEY, ETHERSCAN_API_KEY, ETHERSCAN_API_URL_SEPOLIA.');
       throw new InternalServerErrorException('Ethereum/Wallet configuration missing');
     }
 
-    this.encryptionSecret = encryptionSecretFromEnv; // ✨ 비-null 단언자 제거 (위에서 체크했으므로)
+    this.encryptionSecret = encryptionSecretFromEnv; 
 
-    this.logger.log(`WalletService initialized with RPC: ${rpcUrl} and Token: ${customTokenAddress}`);
+    this.logger.log(`WalletService initialized. RPC: ${rpcUrl}, Token: ${this.customTokenAddress}`);
 
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
 
-    // ERC-20 토큰 ABI (transfer 함수만 있으면 충분)
     const customTokenAbi = [
       "function name() view returns (string)",
       "function symbol() view returns (string)",
@@ -39,163 +43,213 @@ export class WalletService {
       "function totalSupply() view returns (uint256)",
       "function balanceOf(address owner) view returns (uint256)",
       "function transfer(address to, uint256 amount) returns (bool)",
+      "event Transfer(address indexed from, address indexed to, uint256 value)"
     ];
 
-    this.customTokenContract = new ethers.Contract(customTokenAddress, customTokenAbi, this.provider);
-    this.backendWallet = new ethers.Wallet(backendPrivateKey, this.provider); // ✨ 이름 변경 및 비-null 단언자 제거
+    this.customTokenContract = new ethers.Contract(this.customTokenAddress, customTokenAbi, this.provider);
+    this.backendWallet = new ethers.Wallet(backendPrivateKey, this.provider); 
   }
 
-  // --- 개인키 암호화/복호화 헬퍼 메소드 ---
-
-  /**
-   * 개인키를 암호화합니다. IV를 무작위로 생성하고 암호화된 텍스트와 함께 반환합니다.
-   * @param privateKey 암호화할 개인키 문자열 (예: '0x...')
-   * @returns {string} 암호화된 개인키 (IV:암호화된데이터 형식)
-   */
-  public encryptPrivateKey(privateKey: string): string { // ✨ private -> public 변경
-    if (!this.encryptionSecret || this.encryptionSecret.length !== 64) { // 256비트 키이므로 최소 32바이트(문자)
-      throw new InternalServerErrorException('Wallet encryption secret is not configured or too short (min 32 chars).');
+  public encryptPrivateKey(privateKey: string): string {
+    if (!this.encryptionSecret || this.encryptionSecret.length < 32) {
+      this.logger.error('encryptPrivateKey: Wallet encryption secret is not configured or too short (min 32 bytes).');
+      throw new InternalServerErrorException('Wallet encryption secret is not configured or too short.');
     }
     
-    const iv = crypto.randomBytes(16); // ✨ 랜덤 IV 생성 (보안 강화)
-    // ✨ utf8 인코딩으로 Buffer.from() 사용
+    const iv = crypto.randomBytes(16); 
     const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(this.encryptionSecret, 'hex'), iv); 
     
     let encrypted = cipher.update(privateKey, 'utf8', 'hex');
     encrypted += cipher.final('hex');
     
-    return iv.toString('hex') + ':' + encrypted; // IV를 암호화된 데이터 앞에 붙여서 저장
+    return iv.toString('hex') + ':' + encrypted; 
   }
 
-  /**
-   * 암호화된 개인키를 복호화합니다.
-   * @param encryptedText 암호화된 개인키 문자열 (IV:암호화된데이터 형식)
-   * @returns {string} 복호화된 개인키
-   */
-  public decryptPrivateKey(encryptedText: string): string { // ✨ private -> public 변경
-    if (!this.encryptionSecret || this.encryptionSecret.length !== 64) {
-      throw new InternalServerErrorException('Wallet encryption secret is not configured or too short (min 32 chars).');
+  public decryptPrivateKey(encryptedText: string): string {
+    if (!this.encryptionSecret || this.encryptionSecret.length < 32) {
+      this.logger.error('decryptPrivateKey: Wallet encryption secret is not configured or too short (min 32 bytes).');
+      throw new InternalServerErrorException('Wallet encryption secret is not configured or too short.');
     }
 
     const parts = encryptedText.split(':');
     if (parts.length !== 2) {
+      this.logger.error('decryptPrivateKey: Invalid encrypted private key format.');
       throw new BadRequestException('Invalid encrypted private key format. Expected IV:encrypted_data.');
     }
     const iv = Buffer.from(parts[0], 'hex');
     const encrypted = parts[1];
 
-   try {
-      // ✨ 핵심 수정: 'utf8' 대신 'hex' 인코딩 사용
+    try {
       const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(this.encryptionSecret, 'hex'), iv); 
       let decrypted = decipher.update(encrypted, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
       return decrypted;
-    } catch (error) {
-      this.logger.error('Failed to decrypt private key:', error.message);
+    } catch (error: any) {
+      this.logger.error('decryptPrivateKey: Failed to decrypt private key:', error.message);
       throw new UnauthorizedException('Failed to decrypt wallet private key. It might be corrupted or an incorrect encryption key is used.');
     }
   }
 
-  // --- 지갑 생성 및 잔액 조회 기존 로직 ---
-
-  /**
-   * 새로운 이더리움 지갑을 생성하고 개인키를 암호화하여 반환합니다.
-   * 이 지갑은 회원가입 시 사용자에게 할당됩니다.
-   * @returns { address: string; encryptedPrivateKey: string; } 새 지갑 주소와 암호화된 개인키
-   */
   async createNewWallet(): Promise<{ address: string; encryptedPrivateKey: string }> {
     try {
-      const wallet = ethers.Wallet.createRandom(); // 새로운 랜덤 지갑 생성
-      // ✨ 수정: public encryptPrivateKey 메서드 사용
+      const wallet = ethers.Wallet.createRandom(); 
       const encryptedPrivateKey = this.encryptPrivateKey(wallet.privateKey); 
-      this.logger.log(`New wallet created for user: ${wallet.address}`);
+      this.logger.log(`createNewWallet: New wallet created: ${wallet.address}`);
       return {
         address: wallet.address,
         encryptedPrivateKey: encryptedPrivateKey,
       };
-    } catch (error) {
-      this.logger.error('Failed to create new wallet:', error.message);
+    } catch (error: any) {
+      this.logger.error('createNewWallet: Failed to create new wallet:', error.message);
       throw new InternalServerErrorException('Failed to create new wallet');
     }
   }
 
-  /**
-   * ETH 및 커스텀 토큰 잔액을 조회합니다.
-   * @param address 조회할 지갑 주소
-   * @returns { customTokenBalance: string, ethBalance: string } 잔액 정보
-   */
   async getBalances(address: string): Promise<{ customTokenBalance: string; ethBalance: string }> {
+    if (!ethers.isAddress(address)) {
+      this.logger.error(`getBalances: Invalid address provided: ${address}`);
+      throw new BadRequestException('유효하지 않은 지갑 주소입니다.');
+    }
     try {
       const ethBalance = await this.provider.getBalance(address);
       const customTokenBalance = await this.customTokenContract.getFunction('balanceOf')(address);
-      // decimals는 한 번만 가져오면 되지만, 여기서는 간단화를 위해 매번 가져옵니다.
-      // 실제로는 컨트랙트 생성 시 또는 서비스 시작 시 한 번만 가져와서 저장하는 것이 효율적입니다.
-      // const decimals = await this.customTokenContract.getFunction('decimals')(); 
-
+      
+      this.logger.log(`getBalances: Fetched balances for ${address} - ETH: ${ethers.formatEther(ethBalance)}, Token: ${ethers.formatUnits(customTokenBalance, await this.customTokenContract.getFunction('decimals')())}`);
       return {
-        ethBalance: ethBalance.toString(),
-        customTokenBalance: customTokenBalance.toString(),
+        ethBalance: ethers.formatEther(ethBalance),
+        customTokenBalance: ethers.formatUnits(customTokenBalance, await this.customTokenContract.getFunction('decimals')()),
       };
-    } catch (error) {
-      this.logger.error(`Failed to get balances for ${address}:`, error.message);
-      throw new BadRequestException('Failed to fetch wallet balances');
+    } catch (error: any) {
+      this.logger.error(`getBalances: Failed to get balances for ${address}:`, error.message);
+      throw new InternalServerErrorException('Failed to fetch wallet balances');
     }
   }
 
-  // --- 토큰 송금 기능 추가 ---
-
-  /**
-   * 사용자 지갑에서 커스텀 토큰을 전송합니다.
-   * @param senderEncryptedPrivateKey 송신자의 암호화된 개인키
-   * @param toAddress 수신자 지갑 주소
-   * @param amount 전송할 토큰 수량 (사용자 입력 값, 단위를 신경 쓰지 않음)
-   * @returns 트랜잭션 응답
-   */
-  async sendCustomToken( // ✨ 메서드 이름 변경 (sendToken -> sendCustomToken)
+  async sendCustomToken( 
     senderEncryptedPrivateKey: string,
     toAddress: string,
-    amount: string, // 사용자 입력값 (예: "100")
+    amount: string, 
   ): Promise<ethers.ContractTransactionResponse> {
+    if (!ethers.isAddress(toAddress)) {
+      this.logger.error(`sendCustomToken: Invalid recipient address provided: ${toAddress}`);
+      throw new BadRequestException('유효하지 않은 수신자 지갑 주소입니다.');
+    }
+    if (parseFloat(amount) <= 0) {
+      this.logger.error(`sendCustomToken: Invalid amount provided: ${amount}`);
+      throw new BadRequestException('유효하지 않은 송금액입니다. 0보다 커야 합니다.');
+    }
+
     try {
-      // 1. 암호화된 개인키를 복호화하여 실제 개인키 획득
       const decryptedPrivateKey = this.decryptPrivateKey(senderEncryptedPrivateKey);
-      
-      // 2. 복호화된 개인키로 사용자 지갑 인스턴스 생성
       const senderWallet = new ethers.Wallet(decryptedPrivateKey, this.provider);
-
-      // 3. 토큰 컨트랙트의 decimals (소수점 자릿수) 가져오기
-      // decimals는 한 번만 가져오면 되지만, 여기서는 간소화를 위해 매번 가져옵니다.
       const decimals = await this.customTokenContract.getFunction('decimals')();
-      
-      // 4. 전송할 토큰 수량을 컨트랙트가 이해할 수 있는 단위로 변환 (BigInt)
-      const amountWei = ethers.parseUnits(amount, decimals);
-
-      // 5. 트랜잭션 전송
-      // 사용자의 지갑(senderWallet)을 통해 컨트랙트와 연결
+      const amountWei = ethers.parseUnits(amount, decimals); 
       const tokenContractWithSigner = this.customTokenContract.connect(senderWallet);
-
-      // ERC-20 transfer 함수 호출
+      
+      this.logger.log(`sendCustomToken: Preparing to send ${amount} tokens from ${senderWallet.address} to ${toAddress}`);
       const tx = await tokenContractWithSigner.getFunction('transfer')(toAddress, amountWei);
       
-      this.logger.log(`Token transfer transaction sent: ${tx.hash}`);
+      this.logger.log(`sendCustomToken: Transaction sent: ${tx.hash}`);
       
-      // 트랜잭션이 블록에 포함될 때까지 대기
       await tx.wait(); 
-      this.logger.log(`Token transfer transaction confirmed: ${tx.hash}`);
+      this.logger.log(`sendCustomToken: Transaction confirmed: ${tx.hash}`);
 
       return tx;
-    } catch (error: any) { // ✨ any 타입 추가하여 error.code 접근 용이하게 함
-      this.logger.error(`Failed to send custom token to ${toAddress} with amount ${amount}:`, error.message, error.stack);
-      // ethers.js의 오류 코드를 기반으로 더 상세한 오류 메시지 제공
+    } catch (error: any) { 
+      this.logger.error(`sendCustomToken: Failed to send custom token to ${toAddress} with amount ${amount}:`, error.message, error.stack);
       if (error.code === 'INSUFFICIENT_FUNDS') {
         throw new BadRequestException('Insufficient ETH for gas fees in sender wallet. Please ensure your wallet has enough ETH for transaction fees.');
       } else if (error.code === 'CALL_EXCEPTION' && error.reason && error.reason.includes('ERC20: transfer amount exceeds balance')) {
-        // 컨트랙트에서 잔액 부족 오류를 명시적으로 반환할 경우
         throw new BadRequestException('Insufficient token balance in sender wallet.');
       } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
         throw new BadRequestException('Could not estimate gas limit. Ensure receiver address is valid and sender has enough funds.');
       }
       throw new InternalServerErrorException(`Failed to send token: ${error.message || 'An unknown error occurred.'}`);
+    }
+  }
+
+  /**
+   * Etherscan API를 사용하여 특정 주소의 ERC-20 토큰 전송 내역을 조회합니다.
+   *
+   * @param walletAddress 조회할 지갑 주소
+   * @returns 트랜잭션 객체 배열
+   */
+  async getTransactions(walletAddress: string): Promise<any[]> {
+    this.logger.log(`[getTransactions] Attempting to fetch transactions for address: ${walletAddress}`);
+
+    if (!ethers.isAddress(walletAddress)) {
+      this.logger.error(`[getTransactions] Invalid wallet address provided: ${walletAddress}`);
+      throw new BadRequestException('유효하지 않은 지갑 주소입니다.');
+    }
+
+    if (!this.etherscanApiKey || !this.etherscanApiUrlSepolia) {
+        this.logger.error('[getTransactions] Etherscan API key or URL is not configured.');
+        throw new InternalServerErrorException('Etherscan API configuration missing.');
+    }
+
+    try {
+      this.logger.log(`[getTransactions] Querying Etherscan for token transactions for ${walletAddress} on contract ${this.customTokenAddress}`);
+      const response = await axios.get(this.etherscanApiUrlSepolia, {
+        params: {
+          module: 'account',
+          action: 'tokentx',
+          address: walletAddress,
+          contractaddress: this.customTokenAddress,
+          sort: 'desc',
+          apikey: this.etherscanApiKey,
+        },
+      });
+
+      if (response.data.status === '1') {
+        const transactions = response.data.result.map((tx: any) => {
+          // ✨✨✨ 이 부분을 수정합니다: tx.tokenDecimal이 이미 숫자이거나 숫자로 변환 가능한 문자열일 경우,
+          // formatUnits는 숫자를 기대하므로 parseInt를 사용하거나, 이미 숫자라면 그대로 사용합니다.
+          // .toString()을 제거하여 숫자형 문자열을 다시 문자열로 만들지 않도록 합니다.
+          let decimalValue = parseInt(tx.tokenDecimal); // Etherscan에서 문자열로 올 경우를 대비하여 parseInt 사용
+          if (isNaN(decimalValue)) { // 혹시 파싱 실패 시 기본값 18 사용
+              this.logger.warn(`[getTransactions] Invalid tokenDecimal for tx ${tx.hash}: ${tx.tokenDecimal}. Defaulting to 18.`);
+              decimalValue = 18;
+          }
+
+          const value = ethers.formatUnits(tx.value, decimalValue); // ✨ 이제 decimalValue는 숫자입니다.
+          
+          let direction: string;
+          if (tx.from && tx.from.toLowerCase() === walletAddress.toLowerCase()) {
+            direction = 'sent';
+          } else if (tx.to && tx.to.toLowerCase() === walletAddress.toLowerCase()) {
+            direction = 'received';
+          } else {
+            direction = 'unknown'; 
+          }
+
+          return {
+            hash: tx.hash,
+            from: tx.from,
+            to: tx.to,
+            value: value, 
+            tokenName: tx.tokenName, 
+            tokenSymbol: tx.tokenSymbol, 
+            tokenType: 'CUSTOM_TOKEN', 
+            timestamp: parseInt(tx.timeStamp) * 1000, 
+            blockNumber: tx.blockNumber,
+            status: 'success', 
+            direction: direction
+          };
+        });
+        this.logger.log(`[getTransactions] Successfully fetched ${transactions.length} custom token transactions for ${walletAddress}.`);
+        return transactions;
+      } else {
+        if (response.data.message && response.data.message.includes('No transactions found')) {
+            this.logger.log(`[getTransactions] No transactions found for ${walletAddress} on Etherscan.`);
+            return [];
+        }
+        this.logger.warn(`[getTransactions] Etherscan API returned status 0 for ${walletAddress}: ${response.data.message}.`);
+        throw new InternalServerErrorException(`Failed to fetch transactions from Etherscan: ${response.data.message || 'Unknown Etherscan API error.'}`);
+      }
+    } catch (error: any) {
+      this.logger.error(`[getTransactions] Error fetching transactions for ${walletAddress} from Etherscan:`, error.message, error.stack);
+      const errorMessage = error.response?.data?.message || error.message;
+      throw new InternalServerErrorException(`거래 내역을 불러오는데 실패했습니다: ${errorMessage}`);
     }
   }
 }

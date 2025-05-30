@@ -1,5 +1,4 @@
 // TokenWallet/client/src/api/walletApi.ts
-// 이 파일을 새로 생성하거나, 기존 walletApi.ts 파일에 다음 내용을 추가합니다.
 
 import axiosClient from './axiosClient';
 import { WalletBalances } from '../types/auth'; // 또는 src/types/wallet.ts에서 임포트
@@ -48,36 +47,46 @@ export interface SendTokenResponse {
  */
 export const sendToken = async (payload: SendTokenPayload): Promise<SendTokenResponse> => {
   try {
-    // 백엔드의 송금 API 엔드포인트에 맞게 경로를 설정합니다.
-    // 여기서는 '/wallet/send'로 가정하지만, 기존 주석에는 '/wallet/send-token'으로 되어있으니
-    // 백엔드 엔드포인트에 맞춰 주세요. (일단 '/wallet/send-token'으로 유지합니다.)
     const response = await axiosClient.post<SendTokenResponse>('/wallet/send-token', payload);
     return response.data;
   } catch (error) {
     console.error("Send token API error:", error);
-    // 에러 발생 시, 백엔드에서 전달하는 메시지를 포함하여 에러를 다시 던집니다.
-    // 에러 구조에 따라 err.response?.data?.message 등으로 접근해야 할 수 있습니다.
     throw error;
   }
 };
 
-// 💡 다음 단계에서 추가할 거래 내역 관련 타입과 함수 (참고용)
-// export interface Transaction {
-//   hash: string;
-//   from: string;
-//   to: string;
-//   value: string;
-//   tokenType: 'ETH' | 'CUSTOM_TOKEN' | string;
-//   timestamp: string;
-//   status: 'success' | 'failed' | 'pending';
-// }
+/**
+ * 블록체인 거래 내역의 상세 정보를 정의하는 인터페이스입니다.
+ * 백엔드의 TransactionResponseDTO와 일치해야 합니다.
+ */
+export interface Transaction {
+  hash: string; // 트랜잭션 해시
+  from: string; // 송신자 주소
+  to: string; // 수신자 주소
+  value: string; // 전송된 토큰의 양 (사람이 읽기 쉬운 형태로 변환된 값, 예: "100.5")
+  tokenName: string; // 토큰 이름 (예: "My Token")
+  tokenSymbol: string; // 토큰 심볼 (예: "MYT")
+  tokenType: 'CUSTOM_TOKEN' | 'ETH'; // 토큰 타입 (현재는 CUSTOM_TOKEN만 해당)
+  timestamp: number; // Unix 타임스탬프 (밀리초 단위, JavaScript Date 객체에 바로 사용 가능)
+  blockNumber: string; // 트랜잭션이 포함된 블록 번호
+  status: 'success' | 'failed' | 'pending'; // 트랜잭션 상태
+  direction: 'sent' | 'received' | 'unknown'; // 이 지갑 기준에서의 방향
+}
 
-// export const fetchTransactions = async (): Promise<Transaction[]> => {
-//   try {
-//     const response = await axiosClient.get<Transaction[]>('/wallet/transactions');
-//     return response.data;
-//   } catch (error) {
-//     console.error("Fetch transactions API error:", error);
-//     throw error;
-//   }
-// };
+/**
+ * 현재 로그인된 사용자의 지갑 거래 내역을 가져오는 함수입니다.
+ * 백엔드의 /wallet/transactions 엔드포인트로 요청합니다.
+ *
+ * @returns Promise<Transaction[]> 사용자의 거래 내역 배열
+ */
+export const fetchTransactions = async (): Promise<Transaction[]> => {
+  try {
+    const response = await axiosClient.get<Transaction[]>('/wallet/transactions');
+    return response.data; // 백엔드에서 받아온 트랜잭션 배열을 반환
+  } catch (error) {
+    console.error("Fetch transactions API error:", error);
+    // axiosClient를 사용하므로, 에러 응답이 이미 파싱되어 있을 수 있습니다.
+    // 여기서는 단순히 에러를 다시 던집니다.
+    throw error; 
+  }
+};
