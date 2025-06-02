@@ -6,10 +6,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, ILike } from 'typeorm'; // ✨ Like, ILike 임포트 추가
+import { Repository, Like, ILike } from 'typeorm';
 import { User, UserRole } from './entities/user.entity';
 import { WalletService } from '../wallet/wallet.service';
 import { PriceService } from '../price/price.service';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserService {
@@ -76,6 +77,7 @@ export class UserService {
   }
 
   // 비밀번호와 개인 키를 제외한, role을 포함한 사용자 정보 조회 (클라이언트 전송용)
+  // 이 메서드는 사용자 상세 정보를 불러올 때 유용합니다. (UserDetailModal에서 사용 예정)
   async findOneWithoutSensitiveInfo(
     id: string,
   ): Promise<Omit<User, 'password' | 'encryptedPrivateKey'> | null> {
@@ -153,7 +155,17 @@ export class UserService {
   > {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
-      select: ['id', 'username', 'name', 'email', 'phoneNumber', 'walletAddress'],
+      select: [
+        'id',
+        'username',
+        'name',
+        'email',
+        'phoneNumber',
+        'walletAddress',
+        'role',       // ✨ 추가: 사용자 역할
+        'createdAt',  // ✨ 추가: 생성일
+        'updatedAt',  // ✨ 추가: 업데이트일
+      ],
     });
 
     if (!user) {
@@ -190,7 +202,9 @@ export class UserService {
     };
   }
 
-  // ✨ 추가: 사용자 역할 변경 메서드 (어드민 페이지에서 사용)
+  /**
+   * 사용자 역할 변경 메서드 (어드민 페이지에서 사용)
+   */
   async updateUserRole(userId: string, newRole: UserRole): Promise<User> {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
     if (!user) {
@@ -200,7 +214,34 @@ export class UserService {
     return this.usersRepository.save(user);
   }
 
-  // ✨ 기존 findAllUsers 대신, 페이지네이션 및 검색/필터링 기능을 가진 메서드로 대체
+  /**
+   * 어드민용: 특정 사용자의 정보를 업데이트합니다.
+   * @param userId 업데이트할 사용자 ID
+   * @param updateData 업데이트할 사용자 정보 (name, email, phoneNumber)
+   * @returns 업데이트된 사용자 엔티티
+   */
+  async updateUser(userId: string, updateData: UpdateUserDto): Promise<User> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found.`);
+    }
+
+    // ✨ 중요: updateData에서 허용된 필드만 업데이트합니다.
+    // walletAddress, username, id, createdAt, updatedAt, role 등
+    // 어드민이 수정할 수 없는 필드들은 자동으로 무시됩니다.
+    // DTO에 정의된 필드만 넘어오므로 안전합니다.
+    if (updateData.name !== undefined) user.name = updateData.name;
+    if (updateData.email !== undefined) user.email = updateData.email;
+    if (updateData.phoneNumber !== undefined) user.phoneNumber = updateData.phoneNumber;
+
+    try {
+      return await this.usersRepository.save(user);
+    } catch (error) {
+      this.logger.error(`Failed to update user ${userId}: ${error.message}`, error.stack);
+      throw new InternalServerErrorException('사용자 정보 업데이트에 실패했습니다.');
+    }
+  }
+
   /**
    * 어드민용: 페이지네이션 및 검색/필터링 기능을 가진 사용자 목록 조회.
    * @param page 현재 페이지 번호 (1부터 시작)
@@ -215,25 +256,22 @@ export class UserService {
     searchQuery: string,
     searchField: string,
   ): Promise<{ users: User[]; total: number }> {
-    const skip = (page - 1) * limit; // 건너뛸 항목 수 계산
+    const skip = (page - 1) * limit;
 
     let whereCondition: any = {};
     if (searchQuery && searchField && searchField !== 'createdAt') {
-      // PostgreSQL에서 대소문자 구분 없는 부분 일치 검색을 위해 ILike 사용
-      // `searchField`는 User 엔티티의 컬럼 이름과 일치해야 합니다.
       whereCondition[searchField] = ILike(`%${searchQuery}%`);
     }
 
     try {
-      // findAndCount 메서드를 사용하여 조건에 맞는 항목과 총 개수를 동시에 가져옵니다.
       const [users, total] = await this.usersRepository.findAndCount({
         where: whereCondition,
-        take: limit, // 현재 페이지에서 가져올 항목 수
-        skip: skip, // 이전 페이지에서 건너뛸 항목 수
+        take: limit,
+        skip: skip,
         order: {
-          createdAt: 'DESC', // 최신 사용자부터 정렬
+          createdAt: 'DESC',
         },
-        select: [ // 클라이언트에게 보낼 필드만 선택
+        select: [
           'id',
           'username',
           'name',
