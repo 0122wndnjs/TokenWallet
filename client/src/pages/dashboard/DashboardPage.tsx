@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchCurrentUser } from "../../api/auth";
 import SendTokenForm from "../../components/wallet/SendTokenForm";
-import Modal from "../../components/common/Modal"; // 경로 확인: ..///components -> ../../components
+import Modal from "../../components/common/Modal";
 import ReceiveTokenModal from "../../components/wallet/ReceiveTokenModal";
 import { fetchTransactions, Transaction } from "../../api/wallet";
 
@@ -29,19 +29,25 @@ const DashboardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false); // ✨ Profile 모달 상태 추가
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [transactionsError, setTransactionsError] = useState<string | null>(
     null
   );
 
+  // ✨ 페이지네이션 및 필터링 관련 상태 추가 ✨
+  const [currentPage, setCurrentPage] = useState(1);
+  const [transactionsPerPage] = useState(5); // 한 페이지당 5개 내역
+  const [filterType, setFilterType] = useState<"all" | "sent" | "received">(
+    "all"
+  ); // 'all', 'sent', 'received'
+
   const handleCopyAddress = useCallback((address: string) => {
     navigator.clipboard.writeText(address);
     alert("지갑 주소가 클립보드에 복사되었습니다!");
   }, []);
 
-  // 사용자 정보 (지갑 주소, 잔액 포함)를 불러오는 함수
   const loadUserData = useCallback(async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
@@ -71,7 +77,6 @@ const DashboardPage: React.FC = () => {
     }
   }, [navigate]);
 
-  // 거래 내역 로딩 함수
   const loadTransactions = useCallback(async (address: string) => {
     if (!address) return;
 
@@ -100,8 +105,8 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleTransactionSuccess = useCallback(() => {
-    loadUserData(); // 잔액과 거래 내역 모두 새로고침
-    setIsSendModalOpen(false); // 송금 모달 닫기
+    loadUserData();
+    setIsSendModalOpen(false);
   }, [loadUserData]);
 
   const openSendModal = () => setIsSendModalOpen(true);
@@ -110,8 +115,8 @@ const DashboardPage: React.FC = () => {
   const openReceiveModal = () => setIsReceiveModalOpen(true);
   const closeReceiveModal = () => setIsReceiveModalOpen(false);
 
-  const openProfileModal = () => setIsProfileModalOpen(true); // ✨ Profile 모달 열기 함수
-  const closeProfileModal = () => setIsProfileModalOpen(false); // ✨ Profile 모달 닫기 함수
+  const openProfileModal = () => setIsProfileModalOpen(true);
+  const closeProfileModal = () => setIsProfileModalOpen(false);
 
   if (loading) {
     return (
@@ -158,13 +163,36 @@ const DashboardPage: React.FC = () => {
 
   const ethValue =
     parseFloat(formattedEthBalance) * (currentUser.ethPriceUsd || 0);
-  // JK 토큰의 USD 가치가 0으로 설정되어 있으므로, 실제 가치 계산 로직 필요 시 수정하세요.
-  const jkValue = parseFloat(formattedCustomTokenBalance.replace(/,/g, "")) * 0; 
+  const jkValue = parseFloat(formattedCustomTokenBalance.replace(/,/g, "")) * 0;
   const totalAssetValue = (ethValue + jkValue).toFixed(4);
+
+  // ✨ 필터링된 거래 내역 계산 ✨
+  const filteredTransactions = transactions.filter((tx) => {
+    if (filterType === "sent") {
+      return tx.direction === "sent";
+    }
+    if (filterType === "received") {
+      return tx.direction === "received";
+    }
+    return true; // "all"일 경우 모든 거래 내역 반환
+  });
+
+  // ✨ 페이지네이션 적용 ✨
+  const indexOfLastTransaction = currentPage * transactionsPerPage;
+  const indexOfFirstTransaction = indexOfLastTransaction - transactionsPerPage;
+  const currentTransactions = filteredTransactions.slice(
+    indexOfFirstTransaction,
+    indexOfLastTransaction
+  );
+
+  const totalPages = Math.ceil(
+    filteredTransactions.length / transactionsPerPage
+  );
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-8">
-      {/* ✨ 1. 헤더 섹션 (스크롤 시 함께 이동) ✨ */}
+      {/* 1. 헤더 섹션 (스크롤 시 함께 이동) */}
       <div className="w-full max-w-2xl flex justify-between items-center mb-8">
         <h1 className="text-4xl font-bold text-white">MY WALLET</h1>
         <div className="flex space-x-4">
@@ -183,9 +211,7 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ✨ 2. 메인 콘텐츠 섹션 ✨ */}
-      {/* 사용자 정보 블록 제거됨 (Profile 모달로 이동) */}
-
+      {/* 2. 메인 콘텐츠 섹션 */}
       <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
         <h3 className="text-2xl font-medium mb-2">나의 지갑 주소:</h3>
         <div className="bg-gray-700 p-4 rounded-md flex justify-between items-center break-words">
@@ -231,20 +257,66 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 기존 "지갑 기능" div 제거됨 (하단 네비게이션으로 이동) */}
-
       {/* 거래 내역 */}
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-24"> {/* ✨ 하단 고정바를 위해 mb-24 추가 ✨ */}
+      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-24">
         <h2 className="text-3xl font-semibold mb-6">최근 거래 내역</h2>
+
+        {/* ✨ 필터 버튼 ✨ */}
+        <div className="flex justify-start space-x-4 mb-6">
+          <button
+            onClick={() => {
+              setFilterType("all");
+              setCurrentPage(1);
+            }}
+            className={`px-5 py-2 rounded-lg font-semibold transition-colors duration-200 ${
+              filterType === "all"
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-gray-700 hover:bg-gray-600"
+            }`}
+          >
+            전체
+          </button>
+          <button
+            onClick={() => {
+              setFilterType("sent");
+              setCurrentPage(1);
+            }}
+            className={`px-5 py-2 rounded-lg font-semibold transition-colors duration-200 ${
+              filterType === "sent"
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-gray-700 hover:bg-gray-600"
+            }`}
+          >
+            보냄
+          </button>
+          <button
+            onClick={() => {
+              setFilterType("received");
+              setCurrentPage(1);
+            }}
+            className={`px-5 py-2 rounded-lg font-semibold transition-colors duration-200 ${
+              filterType === "received"
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-gray-700 hover:bg-gray-600"
+            }`}
+          >
+            받음
+          </button>
+        </div>
+
         {transactionsLoading ? (
           <p className="text-gray-400 text-center">
             거래 내역을 불러오는 중...
           </p>
         ) : transactionsError ? (
           <p className="text-red-400 text-center">오류: {transactionsError}</p>
-        ) : transactions.length === 0 ? (
+        ) : filteredTransactions.length === 0 ? (
           <p className="text-gray-400 text-center">
-            아직 거래 내역이 없습니다.
+            {filterType === "all"
+              ? "아직 거래 내역이 없습니다."
+              : `표시할 ${
+                  filterType === "sent" ? "보낸" : "받은"
+                } 거래 내역이 없습니다.`}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -260,7 +332,7 @@ const DashboardPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="text-gray-200 text-sm font-light">
-                {transactions.map((tx) => (
+                {currentTransactions.map((tx) => (
                   <tr
                     key={tx.hash}
                     className="border-b border-gray-600 hover:bg-gray-600"
@@ -297,13 +369,44 @@ const DashboardPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
+
+            {/* ✨ 페이지네이션 컨트롤 ✨ */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center py-6 space-x-2">
+                <button
+                  onClick={() => paginate(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-gray-700 rounded-lg text-white hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  이전
+                </button>
+                {[...Array(totalPages)].map((_, index) => (
+                  <button
+                    key={index + 1}
+                    onClick={() => paginate(index + 1)}
+                    className={`px-4 py-2 rounded-lg font-semibold ${
+                      currentPage === index + 1
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    }`}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
+                <button
+                  onClick={() => paginate(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-gray-700 rounded-lg text-white hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  다음
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* 기존 로그아웃 버튼 제거됨 (헤더로 이동) */}
-
-      {/* ✨ 3. 하단 네비게이션 섹션 (하단 고정) ✨ */}
+      {/* 3. 하단 네비게이션 섹션 (하단 고정) */}
       <nav className="fixed bottom-0 left-0 w-full bg-gray-800 p-4 shadow-xl z-20">
         <div className="flex justify-around items-center">
           <button
@@ -382,13 +485,16 @@ const DashboardPage: React.FC = () => {
             <ReceiveTokenModal userWalletAddress={currentUser.walletAddress} />
           </Modal>
 
-          {/* ✨ Profile 모달 ✨ */}
+          {/* Profile 모달 */}
           <Modal isOpen={isProfileModalOpen} onClose={closeProfileModal}>
             <div className="p-8 bg-gray-700 rounded-lg text-white max-w-md mx-auto">
-              <h2 className="text-3xl font-semibold mb-4 text-center">내 프로필</h2>
+              <h2 className="text-3xl font-semibold mb-4 text-center">
+                내 프로필
+              </h2>
               <div className="space-y-3">
                 <p className="text-xl text-gray-300">
-                  <span className="font-medium">아이디:</span> {currentUser.username}
+                  <span className="font-medium">아이디:</span>{" "}
+                  {currentUser.username}
                 </p>
                 <p className="text-xl text-gray-300">
                   <span className="font-medium">이름:</span> {currentUser.name}
@@ -398,12 +504,14 @@ const DashboardPage: React.FC = () => {
                 </p>
                 {currentUser.phoneNumber && (
                   <p className="text-xl text-gray-300">
-                    <span className="font-medium">전화번호:</span> {currentUser.phoneNumber}
+                    <span className="font-medium">전화번호:</span>{" "}
+                    {currentUser.phoneNumber}
                   </p>
                 )}
                 {currentUser.createdAt && (
                   <p className="text-lg text-gray-400 pt-4 border-t border-gray-600">
-                    계정 생성일: {new Date(currentUser.createdAt).toLocaleDateString()}
+                    계정 생성일:{" "}
+                    {new Date(currentUser.createdAt).toLocaleDateString()}
                   </p>
                 )}
               </div>
