@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common'; 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import { WalletService } from '../wallet/wallet.service'; // ✨ WalletService 임포트 추가
 import { PriceService } from '../price/price.service'; // ✨ PriceService 임포트 추가
 
@@ -75,6 +75,28 @@ export class UserService {
 
   async findOneById(id: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { id } });
+  }
+
+  // ✨ 추가: 비밀번호와 개인 키를 제외한, role을 포함한 사용자 정보 조회 (클라이언트 전송용)
+  async findOneWithoutSensitiveInfo(id: string): Promise<Omit<User, 'password' | 'encryptedPrivateKey'> | null> {
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      select: ['id', 'username', 'name', 'email', 'phoneNumber', 'walletAddress', 'createdAt', 'updatedAt', 'role'], // role 포함
+    });
+    return user;
+  }
+
+  /**
+   * ID로 사용자를 조회하고, 암호화된 개인 키와 역할을 포함하여 반환합니다.
+   * 이 메서드는 개인 키와 역할 정보가 필요한 내부 로직에서만 사용되어야 합니다.
+   * @param userId 조회할 사용자 ID
+   * @returns 암호화된 개인 키와 역할이 포함된 사용자 엔티티 또는 null
+   */
+  async findUserWithRolesAndPrivateKey(userId: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'username', 'walletAddress', 'encryptedPrivateKey', 'role'], // ✨ role 필드 추가
+    });
   }
 
   async findOneWithoutPassword(id: string): Promise<Omit<User, 'password' | 'encryptedPrivateKey'> | null> {
@@ -145,4 +167,23 @@ export class UserService {
     };
   }
   // ✨✨✨ 수정 끝 ✨✨✨
+
+   // ✨ 추가: 사용자 역할 변경 메서드 (어드민 페이지에서 사용)
+  async updateUserRole(userId: string, newRole: UserRole): Promise<User> {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found.`);
+    }
+    user.role = newRole;
+    return this.usersRepository.save(user);
+  }
+
+  // ✨ 추가: 모든 사용자 목록 조회 (어드민 페이지에서 사용)
+  async findAllUsers(): Promise<Omit<User, 'password' | 'encryptedPrivateKey'>[]> {
+    // 개인 키와 비밀번호는 제외하고 모든 사용자 조회
+    const users = await this.usersRepository.find({ 
+      select: ['id', 'username', 'name', 'email', 'phoneNumber', 'walletAddress', 'createdAt', 'updatedAt', 'role'],
+    });
+    return users;
+  }
 }

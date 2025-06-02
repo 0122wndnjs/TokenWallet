@@ -7,6 +7,12 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+// ✨ UserRole Enum 추가 (선택 사항이지만 명확성을 위해 권장)
+export enum UserRole {
+  USER = 'user',
+  ADMIN = 'admin',
+}
+
 @Entity()
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -27,18 +33,19 @@ export class User {
   @Column({ unique: true, nullable: true })
   phoneNumber: string;
 
-  @CreateDateColumn() // 👈 생성일자 자동 기록
+  @CreateDateColumn()
   createdAt: Date;
 
-  @UpdateDateColumn() // 👈 업데이트 일자 자동 기록
+  @UpdateDateColumn()
   updatedAt: Date;
 
-  // 💡 지갑 주소 필드 추가
   @Column({ unique: true, nullable: true })
   walletAddress: string;
 
-  // ✨ 추가: 암호화된 개인 키 필드
-  // @Column({ nullable: true, select: false }) // ⚠️ 중요: select: false 를 통해 API 응답에서 자동으로 제외되도록 합니다.
-  @Column({ nullable: true, select: false }) 
-  encryptedPrivateKey: string; //⚠️ 보안: 실제 개인 키는 DB에 평문으로 저장하면 절대 안 됩니다. 반드시 암호화해야 합니다!
+  @Column({ nullable: true, select: false })
+  encryptedPrivateKey: string;
+
+  // ✨ 추가: 사용자 역할 필드
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER }) // Enum 타입 사용
+  role: UserRole;
 }

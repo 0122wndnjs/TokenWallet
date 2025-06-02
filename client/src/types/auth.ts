@@ -29,6 +29,7 @@ export interface UserInfo {
   customTokenBalance: string; // ✨ 추가 (BigNumberish를 string으로 받음)
   ethBalance: string; // ✨ 추가 (BigNumberish를 string으로 받음)
   ethPriceUsd: number; // ✨ 새로 추가: ETH 가격 (number 타입으로)
+  role: 'user' | 'admin';
   createdAt?: string;
   updatedAt?: string;
 }
