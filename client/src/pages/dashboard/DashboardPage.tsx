@@ -1,5 +1,3 @@
-// TokenWallet/client/src/pages/dashboard/DashboardPage.tsx
-
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchCurrentUser } from "../../api/auth";
@@ -7,7 +5,7 @@ import SendTokenForm from "../../components/wallet/SendTokenForm";
 import Modal from "../../components/common/Modal";
 import ReceiveTokenModal from "../../components/wallet/ReceiveTokenModal";
 import { fetchTransactions, Transaction } from "../../api/wallet";
-import { toast } from 'react-toastify'; // ✨ toast 임포트 추가
+import { toast } from 'react-toastify';
 
 interface ExtendedUserInfo {
   id: string;
@@ -26,7 +24,7 @@ interface ExtendedUserInfo {
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<ExtendedUserInfo | null>(null);
-  const [loading, setLoading] = useState(true); // 초기 사용자 정보 로딩 상태
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
@@ -37,23 +35,20 @@ const DashboardPage: React.FC = () => {
     null
   );
 
-  // ✨ 페이지네이션 및 필터링 관련 상태 추가 ✨
   const [currentPage, setCurrentPage] = useState(1);
-  const [transactionsPerPage] = useState(5); // 한 페이지당 5개 내역
+  const [transactionsPerPage] = useState(5);
   const [filterType, setFilterType] = useState<"all" | "sent" | "received">(
     "all"
-  ); // 'all', 'sent', 'received'
+  );
 
-  // ✨ handleCopyAddress 함수를 toast.success로 변경
   const handleCopyAddress = useCallback((address: string) => {
     navigator.clipboard.writeText(address)
       .then(() => {
-        // alert("지갑 주소가 클립보드에 복사되었습니다!"); // ✨ 기존 alert
-        toast.success("지갑 주소가 클립보드에 복사되었습니다!"); // ✨ toast.success 사용
+        toast.success("지갑 주소가 클립보드에 복사되었습니다!");
       })
       .catch(err => {
         console.error('클립보드 복사 실패:', err);
-        toast.error('지갑 주소 복사에 실패했습니다.'); // ✨ toast.error 추가 (오류 처리)
+        toast.error('지갑 주소 복사에 실패했습니다.');
       });
   }, []);
 
@@ -172,10 +167,10 @@ const DashboardPage: React.FC = () => {
 
   const ethValue =
     parseFloat(formattedEthBalance) * (currentUser.ethPriceUsd || 0);
-  const jkValue = parseFloat(formattedCustomTokenBalance.replace(/,/g, "")) * 0;
+  // JK 토큰의 USD 가치가 0으로 설정되어 있으므로, 실제 가치에 따라 이 부분을 수정해야 합니다.
+  const jkValue = parseFloat(formattedCustomTokenBalance.replace(/,/g, "")) * 0; 
   const totalAssetValue = (ethValue + jkValue).toFixed(4);
 
-  // ✨ 필터링된 거래 내역 계산 ✨
   const filteredTransactions = transactions.filter((tx) => {
     if (filterType === "sent") {
       return tx.direction === "sent";
@@ -183,10 +178,9 @@ const DashboardPage: React.FC = () => {
     if (filterType === "received") {
       return tx.direction === "received";
     }
-    return true; // "all"일 경우 모든 거래 내역 반환
+    return true;
   });
 
-  // ✨ 페이지네이션 적용 ✨
   const indexOfLastTransaction = currentPage * transactionsPerPage;
   const indexOfFirstTransaction = indexOfLastTransaction - transactionsPerPage;
   const currentTransactions = filteredTransactions.slice(
@@ -201,9 +195,9 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-8">
-      {/* 1. 헤더 섹션 (스크롤 시 함께 이동) */}
-      <div className="w-full max-w-2xl flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold text-white">MY WALLET</h1>
+      {/* 1. 헤더 섹션 (전체 화면 너비 사용) */}
+      <div className="w-full max-w-7xl flex justify-between items-center mb-8 px-4"> {/* max-w-7xl로 확장, px-4 추가 */}
+        <h1 className="text-4xl font-bold text-white whitespace-nowrap">MY WALLET</h1> {/* whitespace-nowrap 추가 */}
         <div className="flex space-x-4">
           <button
             onClick={openProfileModal}
@@ -220,204 +214,208 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. 메인 콘텐츠 섹션 */}
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
-        <h3 className="text-2xl font-medium mb-2">나의 지갑 주소:</h3>
-        <div className="bg-gray-700 p-4 rounded-md flex justify-between items-center break-words">
-          <span className="font-mono text-lg text-green-400 select-all break-all">
-            {currentUser.walletAddress || "지갑 주소 로딩 중..."}
-          </span>
-          {currentUser.walletAddress && (
+      {/* 2. 메인 콘텐츠 섹션 - PC에서는 2단 레이아웃, 모바일/태블릿에서는 1단 */}
+      {/* lg:flex-row: 큰 화면에서는 가로 배치, lg:space-x-8: 가로 배치 시 간격 */}
+      <div className="w-full max-w-7xl flex flex-col lg:flex-row lg:space-x-8 mb-8">
+        {/* 왼쪽 섹션: 나의 지갑 주소 & 자산 현황 */}
+        <div className="w-full lg:w-1/2 flex flex-col space-y-8 mb-8 lg:mb-0"> {/* lg:w-1/2로 너비 조정, mb-8 lg:mb-0으로 마진 조정 */}
+          <div className="bg-gray-800 p-8 rounded-lg shadow-xl">
+            <h3 className="text-2xl font-medium mb-2">나의 지갑 주소:</h3>
+            <div className="bg-gray-700 p-4 rounded-md flex justify-between items-center break-words">
+              <span className="font-mono text-lg text-green-400 select-all break-all">
+                {currentUser.walletAddress || "지갑 주소 로딩 중..."}
+              </span>
+              {currentUser.walletAddress && (
+                <button
+                  onClick={() => handleCopyAddress(currentUser.walletAddress)}
+                  className="ml-4 px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-700 text-white font-semibold flex-shrink-0"
+                >
+                  복사
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-gray-800 p-8 rounded-lg shadow-xl">
+            <h2 className="text-3xl font-semibold mb-6">자산 현황</h2>
+            {loading && (
+              <p className="text-gray-400 text-center mb-4">잔액 업데이트 중...</p>
+            )}
+            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
+              <span className="text-xl font-medium">총 자산 가치:</span>
+              <span className="text-2xl font-bold text-green-400">
+                {`$${totalAssetValue}`}
+              </span>
+            </div>
+            <div>
+              <h3 className="text-2xl font-medium mb-4">보유 코인:</h3>
+              <div className="flex justify-between items-center p-3 mb-2 bg-gray-700 rounded-md">
+                <span className="text-lg">Ethereum (ETH)</span>
+                <span className="text-lg font-bold">
+                  {`${formattedEthBalance} ETH`}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-gray-700 rounded-md">
+                <span className="text-lg">Token (JK)</span>
+                <span className="text-lg font-bold">
+                  {`${formattedCustomTokenBalance} JK`}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 오른쪽 섹션: 최근 거래 내역 */}
+        <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full lg:w-1/2"> {/* lg:w-1/2로 너비 조정 */}
+          <h2 className="text-3xl font-semibold mb-6">최근 거래 내역</h2>
+
+          <div className="flex justify-start space-x-4 mb-6">
             <button
-              onClick={() => handleCopyAddress(currentUser.walletAddress)}
-              className="ml-4 px-4 py-2 bg-indigo-600 rounded hover:bg-indigo-700 text-white font-semibold flex-shrink-0"
+              onClick={() => {
+                setFilterType("all");
+                setCurrentPage(1);
+              }}
+              className={`px-5 py-2 rounded-lg font-semibold transition-colors duration-200 ${
+                filterType === "all"
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-gray-700 hover:bg-gray-600"
+              }`}
             >
-              복사
+              전체
             </button>
+            <button
+              onClick={() => {
+                setFilterType("sent");
+                setCurrentPage(1);
+              }}
+              className={`px-5 py-2 rounded-lg font-semibold transition-colors duration-200 ${
+                filterType === "sent"
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-gray-700 hover:bg-gray-600"
+              }`}
+            >
+              보냄
+            </button>
+            <button
+              onClick={() => {
+                setFilterType("received");
+                setCurrentPage(1);
+              }}
+              className={`px-5 py-2 rounded-lg font-semibold transition-colors duration-200 ${
+                filterType === "received"
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-gray-700 hover:bg-gray-600"
+              }`}
+            >
+              받음
+            </button>
+          </div>
+
+          {transactionsLoading ? (
+            <p className="text-gray-400 text-center">
+              거래 내역을 불러오는 중...
+            </p>
+          ) : transactionsError ? (
+            <p className="text-red-400 text-center">오류: {transactionsError}</p>
+          ) : filteredTransactions.length === 0 ? (
+            <p className="text-gray-400 text-center">
+              {filterType === "all"
+                ? "아직 거래 내역이 없습니다."
+                : `표시할 ${
+                    filterType === "sent" ? "보낸" : "받은"
+                  } 거래 내역이 없습니다.`}
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-gray-700 rounded-lg">
+                <thead>
+                  <tr className="bg-gray-600 text-gray-300 uppercase text-sm leading-normal">
+                    <th className="py-3 px-6 text-left">방향</th>
+                    <th className="py-3 px-6 text-left">수량</th>
+                    <th className="py-3 px-6 text-left">토큰</th>
+                    <th className="py-3 px-6 text-left">상대방</th>
+                    <th className="py-3 px-6 text-left">시간</th>
+                    <th className="py-3 px-6 text-left">Tx Hash</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-200 text-sm font-light">
+                  {currentTransactions.map((tx) => (
+                    <tr
+                      key={tx.hash}
+                      className="border-b border-gray-600 hover:bg-gray-600"
+                    >
+                      <td
+                        className={`py-3 px-6 text-left font-bold ${
+                          tx.direction === "sent"
+                            ? "text-red-400"
+                            : "text-green-400"
+                        }`}
+                      >
+                        {tx.direction === "sent" ? "보냄" : "받음"}
+                      </td>
+                      <td className="py-3 px-6 text-left">{tx.value}</td>
+                      <td className="py-3 px-6 text-left">{tx.tokenSymbol}</td>
+                      <td className="py-3 px-6 text-left truncate max-w-[100px]">
+                        {tx.direction === "sent" ? tx.to : tx.from}
+                      </td>
+                      <td className="py-3 px-6 text-left">
+                        {new Date(tx.timestamp).toLocaleString()}
+                      </td>
+                      <td className="py-3 px-6 text-left truncate max-w-[100px]">
+                        <a
+                          href={`https://sepolia.etherscan.io/tx/${tx.hash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:underline"
+                        >
+                          {tx.hash.substring(0, 6)}...
+                          {tx.hash.substring(tx.hash.length - 4)}
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center py-6 space-x-2">
+                  <button
+                    onClick={() => paginate(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 bg-gray-700 rounded-lg text-white hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    이전
+                  </button>
+                  {[...Array(totalPages)].map((_, index) => (
+                    <button
+                      key={index + 1}
+                      onClick={() => paginate(index + 1)}
+                      className={`px-4 py-2 rounded-lg font-semibold ${
+                        currentPage === index + 1
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                      }`}
+                    >
+                      {index + 1}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => paginate(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 bg-gray-700 rounded-lg text-white hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    다음
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
 
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-8">
-        <h2 className="text-3xl font-semibold mb-6">자산 현황</h2>
-        {loading && (
-          <p className="text-gray-400 text-center mb-4">잔액 업데이트 중...</p>
-        )}
-        <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
-          <span className="text-xl font-medium">총 자산 가치:</span>
-          <span className="text-2xl font-bold text-green-400">
-            {`$${totalAssetValue}`}
-          </span>
-        </div>
-        <div>
-          <h3 className="text-2xl font-medium mb-4">보유 코인:</h3>
-          <div className="flex justify-between items-center p-3 mb-2 bg-gray-700 rounded-md">
-            <span className="text-lg">Ethereum (ETH)</span>
-            <span className="text-lg font-bold">
-              {`${formattedEthBalance} ETH`}
-            </span>
-          </div>
-          <div className="flex justify-between items-center p-3 bg-gray-700 rounded-md">
-            <span className="text-lg">Token (JK)</span>
-            <span className="text-lg font-bold">
-              {`${formattedCustomTokenBalance} JK`}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 거래 내역 */}
-      <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl mb-24">
-        <h2 className="text-3xl font-semibold mb-6">최근 거래 내역</h2>
-
-        {/* ✨ 필터 버튼 ✨ */}
-        <div className="flex justify-start space-x-4 mb-6">
-          <button
-            onClick={() => {
-              setFilterType("all");
-              setCurrentPage(1);
-            }}
-            className={`px-5 py-2 rounded-lg font-semibold transition-colors duration-200 ${
-              filterType === "all"
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-gray-700 hover:bg-gray-600"
-            }`}
-          >
-            전체
-          </button>
-          <button
-            onClick={() => {
-              setFilterType("sent");
-              setCurrentPage(1);
-            }}
-            className={`px-5 py-2 rounded-lg font-semibold transition-colors duration-200 ${
-              filterType === "sent"
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-gray-700 hover:bg-gray-600"
-            }`}
-          >
-            보냄
-          </button>
-          <button
-            onClick={() => {
-              setFilterType("received");
-              setCurrentPage(1);
-            }}
-            className={`px-5 py-2 rounded-lg font-semibold transition-colors duration-200 ${
-              filterType === "received"
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-gray-700 hover:bg-gray-600"
-            }`}
-          >
-            받음
-          </button>
-        </div>
-
-        {transactionsLoading ? (
-          <p className="text-gray-400 text-center">
-            거래 내역을 불러오는 중...
-          </p>
-        ) : transactionsError ? (
-          <p className="text-red-400 text-center">오류: {transactionsError}</p>
-        ) : filteredTransactions.length === 0 ? (
-          <p className="text-gray-400 text-center">
-            {filterType === "all"
-              ? "아직 거래 내역이 없습니다."
-              : `표시할 ${
-                  filterType === "sent" ? "보낸" : "받은"
-                } 거래 내역이 없습니다.`}
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-gray-700 rounded-lg">
-              <thead>
-                <tr className="bg-gray-600 text-gray-300 uppercase text-sm leading-normal">
-                  <th className="py-3 px-6 text-left">방향</th>
-                  <th className="py-3 px-6 text-left">수량</th>
-                  <th className="py-3 px-6 text-left">토큰</th>
-                  <th className="py-3 px-6 text-left">상대방</th>
-                  <th className="py-3 px-6 text-left">시간</th>
-                  <th className="py-3 px-6 text-left">Tx Hash</th>
-                </tr>
-              </thead>
-              <tbody className="text-gray-200 text-sm font-light">
-                {currentTransactions.map((tx) => (
-                  <tr
-                    key={tx.hash}
-                    className="border-b border-gray-600 hover:bg-gray-600"
-                  >
-                    <td
-                      className={`py-3 px-6 text-left font-bold ${
-                        tx.direction === "sent"
-                          ? "text-red-400"
-                          : "text-green-400"
-                      }`}
-                    >
-                      {tx.direction === "sent" ? "보냄" : "받음"}
-                    </td>
-                    <td className="py-3 px-6 text-left">{tx.value}</td>
-                    <td className="py-3 px-6 text-left">{tx.tokenSymbol}</td>
-                    <td className="py-3 px-6 text-left truncate max-w-[100px]">
-                      {tx.direction === "sent" ? tx.to : tx.from}
-                    </td>
-                    <td className="py-3 px-6 text-left">
-                      {new Date(tx.timestamp).toLocaleString()}
-                    </td>
-                    <td className="py-3 px-6 text-left truncate max-w-[100px]">
-                      <a
-                        href={`https://sepolia.etherscan.io/tx/${tx.hash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline"
-                      >
-                        {tx.hash.substring(0, 6)}...
-                        {tx.hash.substring(tx.hash.length - 4)}
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {/* ✨ 페이지네이션 컨트롤 ✨ */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center py-6 space-x-2">
-                <button
-                  onClick={() => paginate(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="px-4 py-2 bg-gray-700 rounded-lg text-white hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  이전
-                </button>
-                {[...Array(totalPages)].map((_, index) => (
-                  <button
-                    key={index + 1}
-                    onClick={() => paginate(index + 1)}
-                    className={`px-4 py-2 rounded-lg font-semibold ${
-                      currentPage === index + 1
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                    }`}
-                  >
-                    {index + 1}
-                  </button>
-                ))}
-                <button
-                  onClick={() => paginate(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="px-4 py-2 bg-gray-700 rounded-lg text-white hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  다음
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* 3. 하단 네비게이션 섹션 (하단 고정) */}
+      {/* 3. 하단 네비게이션 섹션 (하단 고정, w-full 유지) */}
       <nav className="fixed bottom-0 left-0 w-full bg-gray-800 p-4 shadow-xl z-20">
-        <div className="flex justify-around items-center">
+        <div className="flex justify-around items-center max-w-2xl mx-auto"> {/* max-w-2xl mx-auto 추가 */}
           <button
             className="flex flex-col items-center justify-center p-3 bg-indigo-700 rounded-lg shadow-md hover:bg-indigo-800 transition-colors duration-200"
             onClick={openSendModal}
