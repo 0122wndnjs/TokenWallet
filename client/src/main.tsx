@@ -1,14 +1,27 @@
 // TokenWallet/client/src/main.tsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import AppRouter from './routes/AppRouter'; // AppRouter 경로 확인
-import './index.css'; // Tailwind CSS 또는 기타 전역 스타일
-import { AuthProvider } from './context/AuthContext'; // ✨ AuthProvider 임포트
+import AppRouter from './routes/AppRouter';
+import './index.css';
+import { AuthProvider } from './context/AuthContext';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css'; 
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AuthProvider> {/* ✨ AuthProvider로 AppRouter를 감쌉니다. */}
+    <AuthProvider>
       <AppRouter />
     </AuthProvider>
+    <ToastContainer
+      position="top-center"
+      autoClose={3000}
+      hideProgressBar={false}
+      newestOnTop={false}
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss
+      draggable
+      pauseOnHover
+    />
   </React.StrictMode>,
 );

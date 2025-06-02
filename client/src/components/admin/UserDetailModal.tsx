@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import axiosClient from '../../api/axiosClient'; 
 import { UserInfo } from '../../types/auth'; 
+import { toast } from 'react-toastify'; // ✨ toast 임포트 확인
 
 interface UserDetailModalProps {
   userId: string;
@@ -16,7 +17,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
   onClose,
   onUserUpdated,
 }) => {
-  const { accessToken } = useAuth(); // accessToken으로 변경
+  const { accessToken } = useAuth();
 
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,9 +41,9 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
         });
         const fetchedUser = response.data;
         console.log("Fetching user details for ID:", userId);
-      console.log("Access Token:", accessToken);
-      console.log("API response data:", response.data); // 이 로그를 추가해주세요!
-      
+        console.log("Access Token:", accessToken);
+        console.log("API response data:", response.data); 
+        
         setUser(fetchedUser);
         setEditableName(fetchedUser.name || '');
         setEditableEmail(fetchedUser.email || '');
@@ -91,7 +92,9 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
 
     } catch (err) {
       console.error('Error updating user:', err);
-      if (axios.isAxiosError(err) && err.response) {
+      // axios import가 되어 있다면 axios.isAxiosError 사용 가능
+      // 아니면 axiosClient.isAxiosError를 사용하거나, 에러 객체 자체를 확인
+      if (axios.isAxiosError(err) && err.response) { 
         setUpdateError(err.response.data.message || '사용자 정보 업데이트에 실패했습니다.');
       } else {
         setUpdateError('사용자 정보 업데이트 중 알 수 없는 오류가 발생했습니다.');
@@ -105,12 +108,14 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
     }
   };
 
-  // ✨ 이 부분을 추가해주세요! (handleUpdate 함수 아래쪽에 위치시키는 것이 일반적)
   const copyToClipboard = (text: string | undefined) => {
     if (text) {
       navigator.clipboard.writeText(text)
-        .then(() => alert('지갑 주소가 복사되었습니다!'))
-        .catch(err => console.error('복사 실패:', err));
+        .then(() => toast.success('지갑 주소가 복사되었습니다!')) // ✨ toast.success 사용
+        .catch(err => {
+          console.error('복사 실패:', err);
+          toast.error('지갑 주소 복사에 실패했습니다.'); // ✨ toast.error 사용
+        });
     }
   };
 
@@ -132,7 +137,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
           <div className="mt-4 text-right">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-300 text-white rounded-md hover:bg-gray-400"
+              className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400"
             >
               닫기
             </button>
@@ -180,7 +185,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
             <div className="flex items-center bg-gray-100 rounded-md">
               <p className="text-gray-900 p-2 truncate">{user.walletAddress}</p>
               <button
-                onClick={() => copyToClipboard(user.walletAddress)} // 여기에 copyToClipboard 호출
+                onClick={() => copyToClipboard(user.walletAddress)} 
                 className="ml-2 px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm flex-shrink-0"
                 title="지갑 주소 복사"
               >
@@ -207,7 +212,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
           <div>
             <label className="block text-gray-600 text-sm font-semibold mb-1">가입일</label>
             <p className="text-gray-900 bg-gray-100 p-2 rounded-md">
-              {user.createdAt ? new Date(user.createdAt).toLocaleString() : 'N/A'}
+              {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
             </p>
           </div>
           <div>
@@ -225,7 +230,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               type="text"
               value={editableName}
               onChange={(e) => setEditableName(e.target.value)}
-              className="w-full p-2 border border-gray-300 text-gray-800 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
@@ -235,7 +240,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               type="email"
               value={editableEmail}
               onChange={(e) => setEditableEmail(e.target.value)}
-              className="w-full p-2 border border-gray-300 text-gray-800 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
@@ -245,7 +250,7 @@ export const UserDetailModal: React.FC<UserDetailModalProps> = ({
               type="text"
               value={editablePhoneNumber}
               onChange={(e) => setEditablePhoneNumber(e.target.value)}
-              className="w-full p-2 border border-gray-300 text-gray-800 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 border border-gray-300 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>

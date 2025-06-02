@@ -1,11 +1,10 @@
 // TokenWallet/client/src/components/admin/UserManagementTable.tsx
 import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
-// ✨ 변경된 Import: UserRole 임포트 제거. UserInfo만 가져옵니다.
 import { UserInfo } from "../../types/auth";
 import { UserDetailModal } from "./UserDetailModal";
-import axiosClient from "../../api/axiosClient"; // axiosClient 임포트
+import axiosClient from "../../api/axiosClient";
+import { toast } from 'react-toastify';
 
 export const UserManagementTable: React.FC = () => {
   const { accessToken } = useAuth();
@@ -83,34 +82,29 @@ export const UserManagementTable: React.FC = () => {
   };
 
   // ✨ handleRoleChange 함수의 newRole 타입을 'user' | 'admin' 리터럴 유니온으로 변경
-  const handleRoleChange = async (
-    userId: string,
-    newRole: "user" | "admin"
-  ) => {
-    if (
-      !window.confirm(
-        `${userId} 사용자의 역할을 ${newRole}으로 변경하시겠습니까?`
-      )
-    ) {
+const handleRoleChange = async (userId: string, newRole: 'user' | 'admin') => {
+    // 역할 변경은 중요한 작업이므로 window.confirm()은 유지하는 것이 좋습니다.
+    if (!window.confirm(`${userId} 사용자의 역할을 ${newRole}으로 변경하시겠습니까?`)) {
       return;
     }
-    if (!accessToken) {
-      alert("인증 토큰이 없어 역할을 변경할 수 없습니다.");
+    if (!accessToken) { 
+      toast.error("인증 토큰이 없어 역할을 변경할 수 없습니다.");
       return;
     }
     try {
       await axiosClient.patch(
         `/admin/users/${userId}/role`,
         { role: newRole },
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        { headers: { Authorization: `Bearer ${accessToken}` } }, 
       );
-      alert("역할이 성공적으로 변경되었습니다.");
-      fetchUsers();
+      toast.success("역할이 성공적으로 변경되었습니다.");
+      fetchUsers(); 
     } catch (err) {
       console.error("Error updating role:", err);
-      alert("역할 변경에 실패했습니다.");
+      toast.error("역할 변경에 실패했습니다."); 
     }
   };
+
 
   const openUserDetailModal = (userId: string) => {
     setSelectedUserId(userId);

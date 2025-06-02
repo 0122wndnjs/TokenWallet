@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react'; // QR 코드 생성 라이브러리 임포트
+import { toast } from 'react-toastify'; // ✨ toast 임포트 추가
 
 interface ReceiveTokenModalProps {
   userWalletAddress: string;
@@ -48,8 +49,16 @@ const ReceiveTokenModal: React.FC<ReceiveTokenModalProps> = ({ userWalletAddress
       <button
         onClick={() => {
           if (userWalletAddress) {
-            navigator.clipboard.writeText(userWalletAddress);
-            alert('지갑 주소가 클립보드에 복사되었습니다!');
+            navigator.clipboard.writeText(userWalletAddress)
+              .then(() => {
+                toast.success('지갑 주소가 클립보드에 복사되었습니다!'); // ✨ toast.success로 변경
+              })
+              .catch(err => {
+                console.error('클립보드 복사 실패:', err);
+                toast.error('지갑 주소 복사에 실패했습니다.'); // ✨ toast.error 추가 (오류 처리)
+              });
+          } else {
+            toast.warn('복사할 지갑 주소가 없습니다.'); // ✨ 주소가 없을 때 경고 토스트
           }
         }}
         className="w-full px-6 py-3 bg-indigo-600 rounded hover:bg-indigo-700 text-white font-semibold shadow-md transition-colors duration-200"

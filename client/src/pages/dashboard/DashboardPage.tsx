@@ -7,6 +7,7 @@ import SendTokenForm from "../../components/wallet/SendTokenForm";
 import Modal from "../../components/common/Modal";
 import ReceiveTokenModal from "../../components/wallet/ReceiveTokenModal";
 import { fetchTransactions, Transaction } from "../../api/wallet";
+import { toast } from 'react-toastify'; // ✨ toast 임포트 추가
 
 interface ExtendedUserInfo {
   id: string;
@@ -43,9 +44,17 @@ const DashboardPage: React.FC = () => {
     "all"
   ); // 'all', 'sent', 'received'
 
+  // ✨ handleCopyAddress 함수를 toast.success로 변경
   const handleCopyAddress = useCallback((address: string) => {
-    navigator.clipboard.writeText(address);
-    alert("지갑 주소가 클립보드에 복사되었습니다!");
+    navigator.clipboard.writeText(address)
+      .then(() => {
+        // alert("지갑 주소가 클립보드에 복사되었습니다!"); // ✨ 기존 alert
+        toast.success("지갑 주소가 클립보드에 복사되었습니다!"); // ✨ toast.success 사용
+      })
+      .catch(err => {
+        console.error('클립보드 복사 실패:', err);
+        toast.error('지갑 주소 복사에 실패했습니다.'); // ✨ toast.error 추가 (오류 처리)
+      });
   }, []);
 
   const loadUserData = useCallback(async () => {

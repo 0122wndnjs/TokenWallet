@@ -1,10 +1,11 @@
 // TokenWallet/client/src/api/axiosClient.ts
 
 import axios from 'axios';
+import { toast } from 'react-toastify'; // ✨ react-toastify의 toast 임포트
 
 // 백엔드 서버의 기본 URL을 설정합니다.
 // NestJS 서버가 3000번 포트에서 실행 중이라고 가정합니다.
-const API_BASE_URL = 'http://localhost:3000'; // ✨ 이 부분을 http://localhost:3000 으로 변경합니다.
+const API_BASE_URL = 'http://localhost:3000'; // 이 부분은 그대로 둡니다.
 
 // axios 인스턴스를 생성합니다.
 // 이렇게 생성된 인스턴스를 통해 모든 API 요청에 공통 설정이 적용됩니다.
@@ -13,7 +14,7 @@ const axiosClient = axios.create({
   headers: {
     'Content-Type': 'application/json', // 기본적으로 JSON 형식으로 데이터를 보냅니다.
   },
-  timeout: 30000, // 요청 타임아웃 10초 설정 (선택 사항)
+  timeout: 30000, // 요청 타임아웃 30초 설정 (선택 사항)
 });
 
 // --- 요청 인터셉터 설정 ---
@@ -41,10 +42,10 @@ axiosClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response && error.response.status === 401) {
+   if (error.response && error.response.status === 401) {
       console.error('Unauthorized error: Token expired or invalid. Logging out...');
       localStorage.removeItem('accessToken');
-      alert('세션이 만료되었거나 유효하지 않습니다. 다시 로그인해주세요.');
+      toast.error('세션이 만료되었거나 유효하지 않습니다. 다시 로그인해주세요.'); 
     }
     return Promise.reject(error);
   }
