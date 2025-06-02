@@ -45,7 +45,6 @@ export class User {
   @Column({ nullable: true, select: false })
   encryptedPrivateKey: string;
 
-  // ✨ 추가: 사용자 역할 필드
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER }) // Enum 타입 사용
   role: UserRole;
 }

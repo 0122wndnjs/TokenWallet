@@ -1,5 +1,5 @@
 // TokenWallet/server/src/user/user.module.ts
-import { Module, forwardRef } from '@nestjs/common'; // ✨ forwardRef 임포트
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
@@ -10,8 +10,8 @@ import { PriceModule } from 'src/price/price.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
-    forwardRef(() => WalletModule), // ✨ WalletModule 임포트에 forwardRef 적용
-    PriceModule
+    forwardRef(() => WalletModule),
+    PriceModule,
   ],
   controllers: [UserController],
   providers: [UserService],
