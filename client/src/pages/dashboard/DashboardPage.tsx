@@ -6,13 +6,12 @@ import SendTokenForm from "../../components/wallet/SendTokenForm";
 import Modal from "../../components/common/Modal";
 import ReceiveTokenModal from "../../components/wallet/ReceiveTokenModal";
 import { fetchTransactions, Transaction } from "../../api/wallet";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 
 // 스켈레톤 컴포넌트 import
 import WalletAddressSkeleton from "../../components/skeletons/WalletAddressSkeleton";
 import AssetStatusSkeleton from "../../components/skeletons/AssetStatusSkeleton";
 import TransactionListSkeleton from "../../components/skeletons/TransactionListSkeleton";
-
 
 interface ExtendedUserInfo {
   id: string;
@@ -49,13 +48,14 @@ const DashboardPage: React.FC = () => {
   );
 
   const handleCopyAddress = useCallback((address: string) => {
-    navigator.clipboard.writeText(address)
+    navigator.clipboard
+      .writeText(address)
       .then(() => {
         toast.success("지갑 주소가 클립보드에 복사되었습니다!");
       })
-      .catch(err => {
-        console.error('클립보드 복사 실패:', err);
-        toast.error('지갑 주소 복사에 실패했습니다.');
+      .catch((err) => {
+        console.error("클립보드 복사 실패:", err);
+        toast.error("지갑 주소 복사에 실패했습니다.");
       });
   }, []);
 
@@ -66,6 +66,8 @@ const DashboardPage: React.FC = () => {
     setTransactionsError(null);
     try {
       const fetchedTransactions = await fetchTransactions();
+      fetchedTransactions.sort((a, b) => b.timestamp - a.timestamp); // 이미 백엔드에서 정렬되지만, 혹시 몰라 다시 정렬
+
       setTransactions(fetchedTransactions);
     } catch (err: any) {
       console.error("Failed to fetch transactions:", err);
@@ -233,7 +235,9 @@ const DashboardPage: React.FC = () => {
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-8">
       {/* 1. 헤더 섹션 (전체 화면 너비 사용) */}
       <div className="w-full max-w-7xl flex justify-between items-center mb-8 px-4">
-        <h1 className="text-4xl font-bold text-white whitespace-nowrap">MY WALLET</h1>
+        <h1 className="text-4xl font-bold text-white whitespace-nowrap">
+          MY WALLET
+        </h1>
         <div className="flex space-x-4">
           <button
             onClick={openProfileModal}
@@ -349,7 +353,9 @@ const DashboardPage: React.FC = () => {
               거래 내역을 불러오는 중...
             </p>
           ) : transactionsError ? (
-            <p className="text-red-400 text-center">오류: {transactionsError}</p>
+            <p className="text-red-400 text-center">
+              오류: {transactionsError}
+            </p>
           ) : filteredTransactions.length === 0 ? (
             <p className="text-gray-400 text-center">
               {filterType === "all"
@@ -374,7 +380,7 @@ const DashboardPage: React.FC = () => {
                 <tbody className="text-gray-200 text-sm font-light">
                   {currentTransactions.map((tx) => (
                     <tr
-                      key={tx.hash}
+                      key={`${tx.hash}-${tx.tokenType}`}
                       className="border-b border-gray-600 hover:bg-gray-600"
                     >
                       <td
@@ -402,7 +408,6 @@ const DashboardPage: React.FC = () => {
                           className="text-blue-400 hover:underline"
                         >
                           {tx.hash.substring(0, 6)}...
-                          {tx.hash.substring(tx.hash.length - 4)}
                         </a>
                       </td>
                     </tr>
@@ -540,7 +545,8 @@ const DashboardPage: React.FC = () => {
                   <span className="font-medium">이름:</span> {currentUser.name}
                 </p>
                 <p className="text-xl text-gray-300">
-                  <span className="font-medium">이메일:</span> {currentUser.email}
+                  <span className="font-medium">이메일:</span>{" "}
+                  {currentUser.email}
                 </p>
                 {currentUser.phoneNumber && (
                   <p className="text-xl text-gray-300">
