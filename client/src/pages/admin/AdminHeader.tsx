@@ -9,11 +9,10 @@ export const AdminHeader: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/admin/login'); // 로그아웃 후 어드민 로그인 페이지로 리다이렉트
+    navigate('/admin/login');
   };
 
   return (
-    // ✨ justify-end 클래스를 추가하여 내부 요소들을 오른쪽 끝으로 정렬합니다.
     <header className="fixed top-0 left-64 right-0 bg-white shadow-sm h-16 flex items-center justify-end px-8 z-30">
       <div className="flex items-center space-x-4">
         {user && (

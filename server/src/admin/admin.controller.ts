@@ -10,9 +10,9 @@ import {
   HttpCode,
   Query,
   Res,
-  NotFoundException, // ✨ 추가: NotFoundException
-  ValidationPipe,   // ✨ 추가: ValidationPipe
-  ParseUUIDPipe,    // ✨ 추가: ParseUUIDPipe
+  NotFoundException,
+  ValidationPipe, 
+  ParseUUIDPipe, 
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -20,12 +20,9 @@ import { Roles } from '../auth/roles.decorator';
 import { UserRole } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
 import { Response } from 'express';
-import { IsEnum, IsNotEmpty } from 'class-validator'; // IsString은 UpdateUserDto에서 사용되므로 여기서는 제거
-
-// ✨ 추가: 사용자 정보 업데이트 DTO 임포트
+import { IsEnum, IsNotEmpty } from 'class-validator';
 import { UpdateUserDto } from '../user/dto/update-user.dto';
 
-// ✨ 기존 UpdateUserRoleDto는 그대로 유지
 export class UpdateUserRoleDto {
   @IsEnum(UserRole, { message: '유효한 역할(user 또는 admin)을 입력해주세요.' })
   @IsNotEmpty({ message: '새로운 역할은 필수입니다.' })

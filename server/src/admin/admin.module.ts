@@ -1,8 +1,7 @@
 // TokenWallet/server/src/admin/admin.module.ts
 import { Module } from '@nestjs/common';
 import { AdminController } from './admin.controller';
-// import { UserService } from '../user/user.service'; // ✨ 이제 직접 임포트할 필요 없음
-import { UserModule } from '../user/user.module'; // UserModule에서 UserService를 export하고 있으므로 여기에 providers로 추가할 필요 없음
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [UserModule], // UserModule에서 UserService를 export하고 있으므로 AdminController에서 사용 가능

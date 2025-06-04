@@ -1,3 +1,4 @@
+// TokenWallet/client/src/pages/DashboardPage.tsx
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchCurrentUser } from "../../api/auth";
@@ -6,6 +7,12 @@ import Modal from "../../components/common/Modal";
 import ReceiveTokenModal from "../../components/wallet/ReceiveTokenModal";
 import { fetchTransactions, Transaction } from "../../api/wallet";
 import { toast } from 'react-toastify';
+
+// 스켈레톤 컴포넌트 import
+import WalletAddressSkeleton from "../../components/skeletons/WalletAddressSkeleton";
+import AssetStatusSkeleton from "../../components/skeletons/AssetStatusSkeleton";
+import TransactionListSkeleton from "../../components/skeletons/TransactionListSkeleton";
+
 
 interface ExtendedUserInfo {
   id: string;
@@ -30,7 +37,7 @@ const DashboardPage: React.FC = () => {
   const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsLoading, setTransactionsLoading] = useState(false); // 거래 내역 로딩 상태 분리
   const [transactionsError, setTransactionsError] = useState<string | null>(
     null
   );
@@ -52,6 +59,24 @@ const DashboardPage: React.FC = () => {
       });
   }, []);
 
+  const loadTransactions = useCallback(async (address: string) => {
+    if (!address) return;
+
+    setTransactionsLoading(true); // 거래 내역 로딩 시작
+    setTransactionsError(null);
+    try {
+      const fetchedTransactions = await fetchTransactions();
+      setTransactions(fetchedTransactions);
+    } catch (err: any) {
+      console.error("Failed to fetch transactions:", err);
+      setTransactionsError(
+        err.message || "거래 내역을 불러오는데 실패했습니다."
+      );
+    } finally {
+      setTransactionsLoading(false); // 거래 내역 로딩 종료
+    }
+  }, []);
+
   const loadUserData = useCallback(async () => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
@@ -59,13 +84,14 @@ const DashboardPage: React.FC = () => {
       return;
     }
 
-    setLoading(true);
+    setLoading(true); // 전체 대시보드 로딩 시작
     setError(null);
 
     try {
       const userAndWalletData: ExtendedUserInfo = await fetchCurrentUser();
       setCurrentUser(userAndWalletData);
       if (userAndWalletData.walletAddress) {
+        // 사용자 데이터 로드 완료 후 거래 내역 로드
         await loadTransactions(userAndWalletData.walletAddress);
       }
     } catch (err: any) {
@@ -77,27 +103,9 @@ const DashboardPage: React.FC = () => {
       localStorage.removeItem("accessToken");
       navigate("/login");
     } finally {
-      setLoading(false);
+      setLoading(false); // 전체 대시보드 로딩 종료
     }
-  }, [navigate]);
-
-  const loadTransactions = useCallback(async (address: string) => {
-    if (!address) return;
-
-    setTransactionsLoading(true);
-    setTransactionsError(null);
-    try {
-      const fetchedTransactions = await fetchTransactions();
-      setTransactions(fetchedTransactions);
-    } catch (err: any) {
-      console.error("Failed to fetch transactions:", err);
-      setTransactionsError(
-        err.message || "거래 내역을 불러오는데 실패했습니다."
-      );
-    } finally {
-      setTransactionsLoading(false);
-    }
-  }, []);
+  }, [navigate, loadTransactions]); // loadTransactions 의존성 추가
 
   useEffect(() => {
     loadUserData();
@@ -109,7 +117,7 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleTransactionSuccess = useCallback(() => {
-    loadUserData();
+    loadUserData(); // 송금 성공 시 사용자 데이터 및 거래 내역 갱신
     setIsSendModalOpen(false);
   }, [loadUserData]);
 
@@ -122,14 +130,43 @@ const DashboardPage: React.FC = () => {
   const openProfileModal = () => setIsProfileModalOpen(true);
   const closeProfileModal = () => setIsProfileModalOpen(false);
 
+  // 로딩 중일 때는 스켈레톤 UI를 렌더링
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-        <p>사용자 및 지갑 정보를 불러오는 중...</p>
+      <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-8">
+        {/* 헤더 섹션 스켈레톤 */}
+        <div className="w-full max-w-7xl flex justify-between items-center mb-8 px-4">
+          <div className="h-10 bg-gray-700 rounded w-1/4"></div>
+          <div className="flex space-x-4">
+            <div className="h-10 w-24 bg-gray-700 rounded-lg"></div>
+            <div className="h-10 w-24 bg-gray-700 rounded-lg"></div>
+          </div>
+        </div>
+
+        {/* 메인 콘텐츠 스켈레톤 */}
+        <div className="w-full max-w-7xl flex flex-col lg:flex-row lg:space-x-8 mb-8">
+          <div className="w-full lg:w-1/2 flex flex-col space-y-8 mb-8 lg:mb-0">
+            <WalletAddressSkeleton />
+            <AssetStatusSkeleton />
+          </div>
+          <div className="w-full lg:w-1/2">
+            <TransactionListSkeleton />
+          </div>
+        </div>
+
+        {/* 하단 네비게이션 스켈레톤 */}
+        <nav className="fixed bottom-0 left-0 w-full bg-gray-800 p-4 shadow-xl z-20">
+          <div className="flex justify-around items-center max-w-2xl mx-auto">
+            <div className="h-16 w-24 bg-gray-700 rounded-lg"></div>
+            <div className="h-16 w-24 bg-gray-700 rounded-lg"></div>
+            <div className="h-16 w-24 bg-gray-700 rounded-lg"></div>
+          </div>
+        </nav>
       </div>
     );
   }
 
+  // 에러 발생 시 UI
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-red-900 text-white p-4">
@@ -167,8 +204,7 @@ const DashboardPage: React.FC = () => {
 
   const ethValue =
     parseFloat(formattedEthBalance) * (currentUser.ethPriceUsd || 0);
-  // JK 토큰의 USD 가치가 0으로 설정되어 있으므로, 실제 가치에 따라 이 부분을 수정해야 합니다.
-  const jkValue = parseFloat(formattedCustomTokenBalance.replace(/,/g, "")) * 0; 
+  const jkValue = parseFloat(formattedCustomTokenBalance.replace(/,/g, "")) * 0; // JK 토큰의 USD 가치, 실제 값으로 업데이트 필요
   const totalAssetValue = (ethValue + jkValue).toFixed(4);
 
   const filteredTransactions = transactions.filter((tx) => {
@@ -196,8 +232,8 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-8">
       {/* 1. 헤더 섹션 (전체 화면 너비 사용) */}
-      <div className="w-full max-w-7xl flex justify-between items-center mb-8 px-4"> {/* max-w-7xl로 확장, px-4 추가 */}
-        <h1 className="text-4xl font-bold text-white whitespace-nowrap">MY WALLET</h1> {/* whitespace-nowrap 추가 */}
+      <div className="w-full max-w-7xl flex justify-between items-center mb-8 px-4">
+        <h1 className="text-4xl font-bold text-white whitespace-nowrap">MY WALLET</h1>
         <div className="flex space-x-4">
           <button
             onClick={openProfileModal}
@@ -215,10 +251,9 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* 2. 메인 콘텐츠 섹션 - PC에서는 2단 레이아웃, 모바일/태블릿에서는 1단 */}
-      {/* lg:flex-row: 큰 화면에서는 가로 배치, lg:space-x-8: 가로 배치 시 간격 */}
       <div className="w-full max-w-7xl flex flex-col lg:flex-row lg:space-x-8 mb-8">
         {/* 왼쪽 섹션: 나의 지갑 주소 & 자산 현황 */}
-        <div className="w-full lg:w-1/2 flex flex-col space-y-8 mb-8 lg:mb-0"> {/* lg:w-1/2로 너비 조정, mb-8 lg:mb-0으로 마진 조정 */}
+        <div className="w-full lg:w-1/2 flex flex-col space-y-8 mb-8 lg:mb-0">
           <div className="bg-gray-800 p-8 rounded-lg shadow-xl">
             <h3 className="text-2xl font-medium mb-2">나의 지갑 주소:</h3>
             <div className="bg-gray-700 p-4 rounded-md flex justify-between items-center break-words">
@@ -238,9 +273,7 @@ const DashboardPage: React.FC = () => {
 
           <div className="bg-gray-800 p-8 rounded-lg shadow-xl">
             <h2 className="text-3xl font-semibold mb-6">자산 현황</h2>
-            {loading && (
-              <p className="text-gray-400 text-center mb-4">잔액 업데이트 중...</p>
-            )}
+            {/* 자산 현황 섹션의 로딩 상태는 전체 로딩으로 대체 */}
             <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
               <span className="text-xl font-medium">총 자산 가치:</span>
               <span className="text-2xl font-bold text-green-400">
@@ -266,7 +299,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* 오른쪽 섹션: 최근 거래 내역 */}
-        <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full lg:w-1/2"> {/* lg:w-1/2로 너비 조정 */}
+        <div className="bg-gray-800 p-8 rounded-lg shadow-xl w-full lg:w-1/2">
           <h2 className="text-3xl font-semibold mb-6">최근 거래 내역</h2>
 
           <div className="flex justify-start space-x-4 mb-6">
@@ -311,7 +344,7 @@ const DashboardPage: React.FC = () => {
             </button>
           </div>
 
-          {transactionsLoading ? (
+          {transactionsLoading ? ( // 거래 내역만 따로 로딩 중일 때
             <p className="text-gray-400 text-center">
               거래 내역을 불러오는 중...
             </p>
@@ -415,7 +448,7 @@ const DashboardPage: React.FC = () => {
 
       {/* 3. 하단 네비게이션 섹션 (하단 고정, w-full 유지) */}
       <nav className="fixed bottom-0 left-0 w-full bg-gray-800 p-4 shadow-xl z-20">
-        <div className="flex justify-around items-center max-w-2xl mx-auto"> {/* max-w-2xl mx-auto 추가 */}
+        <div className="flex justify-around items-center max-w-2xl mx-auto">
           <button
             className="flex flex-col items-center justify-center p-3 bg-indigo-700 rounded-lg shadow-md hover:bg-indigo-800 transition-colors duration-200"
             onClick={openSendModal}

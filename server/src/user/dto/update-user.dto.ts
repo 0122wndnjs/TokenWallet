@@ -16,7 +16,4 @@ export class UpdateUserDto {
   @IsString()
   @IsPhoneNumber('KR') // 한국 전화번호 형식
   phoneNumber?: string; // 전화번호 (수정 가능)
-
-  // walletAddress는 여기에 포함하지 않습니다.
-  // 어드민이 이 필드를 수정하는 것을 원천적으로 방지합니다.
 }

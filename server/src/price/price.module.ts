@@ -1,9 +1,8 @@
 // TokenWallet/server/src/price/price.module.ts
-import { Module } from '@nestjs/common'; // CacheModule은 여기서 제거
+import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { PriceService } from './price.service';
-import { CacheModule } from '@nestjs/cache-manager'; // ✨ 여기에서 CacheModule 임포트!
-// import * as redisStore from 'cache-manager-redis-store'; // Redis를 사용하려면 필요. (현재는 메모리 캐시)
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [

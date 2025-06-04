@@ -30,7 +30,6 @@ const LoginPage: React.FC = () => {
     try {
       const response = await login(data);
       localStorage.setItem("accessToken", response.accessToken);
-      console.log("Login successful:", response.user);
       navigate("/dashboard");
     } catch (err: any) {
       console.error("Login error:", err);

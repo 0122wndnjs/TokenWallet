@@ -23,9 +23,9 @@ import { useAuth } from '../context/AuthContext';
 const ProtectedRoute: React.FC = () => { // ✨ { children: React.ReactNode } 타입 정의 제거
   const { isAuthenticated, loading } = useAuth(); // AuthContext에서 상태 가져오기
 
-  if (loading) {
-    return <div className="text-center py-8">인증 상태 로딩 중...</div>; // 로딩 중 UI
-  }
+  // if (loading) {
+  //   return <div className="text-center py-8">인증 상태 로딩 중...</div>; // 로딩 중 UI
+  // }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -37,9 +37,9 @@ const ProtectedRoute: React.FC = () => { // ✨ { children: React.ReactNode } �
 const AppRouter: React.FC = () => {
   const { user, isAuthenticated, loading } = useAuth();
 
-  if (loading) {
-    return <div className="text-center py-8">애플리케이션 데이터 로딩 중...</div>;
-  }
+  // if (loading) {
+  //   return <div className="text-center py-8">애플리케이션 데이터 로딩 중...</div>;
+  // }
 
   return (
     <Router>
