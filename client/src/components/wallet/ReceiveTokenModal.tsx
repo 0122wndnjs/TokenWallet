@@ -3,6 +3,7 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react'; // QR 코드 생성 라이브러리 임포트
 import { toast } from 'react-toastify'; // ✨ toast 임포트 추가
+import logoImage from "../../assets/logo.png";
 
 interface ReceiveTokenModalProps {
   userWalletAddress: string;
@@ -25,7 +26,7 @@ const ReceiveTokenModal: React.FC<ReceiveTokenModalProps> = ({ userWalletAddress
             level="H" 
             includeMargin={false}
             imageSettings={{
-                src: "/logo512.png", // 프로젝트 로고 이미지 (선택 사항)
+                src: logoImage, // 프로젝트 로고 이미지 (선택 사항)
                 x: undefined,
                 y: undefined,
                 height: 32,

@@ -20,7 +20,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSubmit, isLoading }) => {
   };
 
   return (
-    // Tailwind의 `space-y-4` 클래스로 자식 요소들 사이에 상하 간격을 줍니다.
     <form onSubmit={handleSubmit} className="space-y-4">
       <InputField
         label="아이디"

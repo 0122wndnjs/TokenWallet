@@ -36,16 +36,15 @@ const DashboardPage: React.FC = () => {
   const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [transactionsLoading, setTransactionsLoading] = useState(false); // 거래 내역 로딩 상태 분리
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [transactionsError, setTransactionsError] = useState<string | null>(
     null
   );
-
   const [currentPage, setCurrentPage] = useState(1);
   const [transactionsPerPage] = useState(5);
-  const [filterType, setFilterType] = useState<"all" | "sent" | "received">(
-    "all"
-  );
+ const [filterToken, setFilterToken] = useState<"all" | "ETH" | "JK">(
+  "all"
+);
 
   const handleCopyAddress = useCallback((address: string) => {
     navigator.clipboard
@@ -210,14 +209,12 @@ const DashboardPage: React.FC = () => {
   const totalAssetValue = (ethValue + jkValue).toFixed(4);
 
   const filteredTransactions = transactions.filter((tx) => {
-    if (filterType === "sent") {
-      return tx.direction === "sent";
-    }
-    if (filterType === "received") {
-      return tx.direction === "received";
-    }
+  if (filterToken === "all") {
     return true;
-  });
+  } else {
+    return tx.tokenSymbol.toUpperCase() === filterToken.toUpperCase();
+  }
+});
 
   const indexOfLastTransaction = currentPage * transactionsPerPage;
   const indexOfFirstTransaction = indexOfLastTransaction - transactionsPerPage;
@@ -259,7 +256,7 @@ const DashboardPage: React.FC = () => {
         {/* 왼쪽 섹션: 나의 지갑 주소 & 자산 현황 */}
         <div className="w-full lg:w-1/2 flex flex-col space-y-8 mb-8 lg:mb-0">
           <div className="bg-gray-800 p-8 rounded-lg shadow-xl">
-            <h3 className="text-2xl font-medium mb-2">나의 지갑 주소:</h3>
+            <h3 className="text-2xl font-semibold mb-2">지갑 주소:</h3>
             <div className="bg-gray-700 p-4 rounded-md flex justify-between items-center break-words">
               <span className="font-mono text-lg text-green-400 select-all break-all">
                 {currentUser.walletAddress || "지갑 주소 로딩 중..."}
@@ -309,42 +306,42 @@ const DashboardPage: React.FC = () => {
           <div className="flex justify-start space-x-4 mb-6">
             <button
               onClick={() => {
-                setFilterType("all");
+                setFilterToken("all");
                 setCurrentPage(1);
               }}
               className={`px-5 py-2 rounded-lg font-semibold transition-colors duration-200 ${
-                filterType === "all"
+                filterToken === "all"
                   ? "bg-blue-600 hover:bg-blue-700"
                   : "bg-gray-700 hover:bg-gray-600"
               }`}
             >
-              전체
+              전체 토큰
             </button>
             <button
               onClick={() => {
-                setFilterType("sent");
+                setFilterToken("ETH");
                 setCurrentPage(1);
               }}
               className={`px-5 py-2 rounded-lg font-semibold transition-colors duration-200 ${
-                filterType === "sent"
+                filterToken === "ETH"
                   ? "bg-blue-600 hover:bg-blue-700"
                   : "bg-gray-700 hover:bg-gray-600"
               }`}
             >
-              보냄
+              ETH
             </button>
             <button
               onClick={() => {
-                setFilterType("received");
+                setFilterToken("JK");
                 setCurrentPage(1);
               }}
               className={`px-5 py-2 rounded-lg font-semibold transition-colors duration-200 ${
-                filterType === "received"
+                filterToken === "JK"
                   ? "bg-blue-600 hover:bg-blue-700"
                   : "bg-gray-700 hover:bg-gray-600"
               }`}
             >
-              받음
+              JK
             </button>
           </div>
 
@@ -358,23 +355,21 @@ const DashboardPage: React.FC = () => {
             </p>
           ) : filteredTransactions.length === 0 ? (
             <p className="text-gray-400 text-center">
-              {filterType === "all"
-                ? "아직 거래 내역이 없습니다."
-                : `표시할 ${
-                    filterType === "sent" ? "보낸" : "받은"
-                  } 거래 내역이 없습니다.`}
-            </p>
+      {filterToken === "all"
+        ? "아직 거래 내역이 없습니다."
+        : `${filterToken} 토큰 거래 내역이 없습니다.`}
+    </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full bg-gray-700 rounded-lg">
                 <thead>
-                  <tr className="bg-gray-600 text-gray-300 uppercase text-sm leading-normal">
-                    <th className="py-3 px-6 text-left">방향</th>
-                    <th className="py-3 px-6 text-left">수량</th>
-                    <th className="py-3 px-6 text-left">토큰</th>
-                    <th className="py-3 px-6 text-left">상대방</th>
-                    <th className="py-3 px-6 text-left">시간</th>
-                    <th className="py-3 px-6 text-left">Tx Hash</th>
+                  <tr className="bg-gray-600 text-gray-300 uppercase text-sm leading-normal whitespace-nowrap">
+                    <th className="py-3 px-4 text-left ">방향</th>
+                    <th className="py-3 px-4 text-left">수량</th>
+                    <th className="py-3 px-4 text-left">토큰</th>
+                    <th className="py-3 px-4 text-left">상대방</th>
+                    <th className="py-3 px-4 text-left">시간</th>
+                    <th className="py-3 px-4 text-left">Tx Hash</th>
                   </tr>
                 </thead>
                 <tbody className="text-gray-200 text-sm font-light">
@@ -390,17 +385,17 @@ const DashboardPage: React.FC = () => {
                             : "text-green-400"
                         }`}
                       >
-                        {tx.direction === "sent" ? "보냄" : "받음"}
+                        {tx.direction === "sent" ? "OUT" : "IN"}
                       </td>
-                      <td className="py-3 px-6 text-left">{tx.value}</td>
-                      <td className="py-3 px-6 text-left">{tx.tokenSymbol}</td>
-                      <td className="py-3 px-6 text-left truncate max-w-[100px]">
+                      <td className="py-3 px-4 text-left">{tx.value}</td>
+                      <td className="py-3 px-4 text-left">{tx.tokenSymbol}</td>
+                      <td className="py-3 px-4 text-left truncate max-w-[100px]">
                         {tx.direction === "sent" ? tx.to : tx.from}
                       </td>
-                      <td className="py-3 px-6 text-left">
+                      <td className="py-3 px-4 text-left">
                         {new Date(tx.timestamp).toLocaleString()}
                       </td>
-                      <td className="py-3 px-6 text-left truncate max-w-[100px]">
+                      <td className="py-3 px-4 text-left truncate max-w-[100px]">
                         <a
                           href={`https://sepolia.etherscan.io/tx/${tx.hash}`}
                           target="_blank"

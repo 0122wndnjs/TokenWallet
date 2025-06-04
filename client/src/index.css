@@ -6,7 +6,7 @@
   line-height: 1.5;
   font-weight: 400;
 
-  /* color-scheme: light dark;  <-- 이 줄을 주석 처리 */
+  color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87); /* 기본 텍스트 색상 (다크 모드 기준) */
   background-color: #242424; /* 기본 배경색 (다크 모드 기준) */
 
@@ -55,15 +55,15 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-/* @media (prefers-color-scheme: light) {  <-- 이 미디어 쿼리 블록 전체를 주석 처리 */
-/* :root { */
-/* color: #213547; */
-/* background-color: #ffffff; */
-/* } */
-/* a:hover { */
-/* color: #747bff; */
-/* } */
-/* button { */
-/* background-color: #f9f9f9; */
-/* } */
-/* } */
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
