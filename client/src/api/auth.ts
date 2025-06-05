@@ -1,7 +1,7 @@
 // TokenWallet/client/src/api/auth.ts
 
 import axiosClient from './axiosClient';
-import { LoginPayload, RegisterPayload, AuthResponse, UserInfo } from '../types/auth';
+import { LoginPayload, RegisterPayload, AuthResponse, UserInfo } from '../types';
 
 export const login = async (credentials: LoginPayload): Promise<AuthResponse> => {
   try {

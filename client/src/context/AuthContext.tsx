@@ -8,7 +8,7 @@ import React, {
   useCallback,
 } from 'react';
 // import axios from 'axios'; // ✨ axios 직접 임포트 대신 API 함수 임포트
-import { AuthResponse, LoginPayload, UserInfo, RegisterPayload } from '../types/auth';
+import { AuthResponse, LoginPayload, UserInfo, RegisterPayload } from '../types';
 // ✨ API 함수 임포트
 import { login as loginApi, register as registerApi, logout as logoutApi, fetchCurrentUser as fetchCurrentUserApi } from '../api/auth';
 

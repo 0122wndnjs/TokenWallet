@@ -29,7 +29,7 @@ export interface UserInfo {
   customTokenBalance: string; // ✨ 추가 (BigNumberish를 string으로 받음)
   ethBalance: string; // ✨ 추가 (BigNumberish를 string으로 받음)
   ethPriceUsd: number; // ✨ 새로 추가: ETH 가격 (number 타입으로)
-  role: 'user' | 'admin';
+  role: "user" | "admin";
   createdAt?: string;
   updatedAt?: string;
 }
@@ -47,4 +47,18 @@ export interface WalletBalances {
   walletAddress: string; // 사용자 지갑 주소
   customTokenBalance: string; // 커스텀 토큰 잔액 (문자열 BigInt 형태)
   ethBalance: string; // ETH 잔액 (문자열 BigInt 형태)
+}
+
+export interface Transaction {
+  hash: string; // 트랜잭션 해시
+  from: string; // 송신자 주소
+  to: string; // 수신자 주소
+  value: string; // 전송된 토큰의 양 (사람이 읽기 쉬운 형태로 변환된 값, 예: "100.5")
+  tokenName: string; // 토큰 이름 (예: "My Token")
+  tokenSymbol: string; // 토큰 심볼 (예: "MYT")
+  tokenType: "CUSTOM_TOKEN" | "ETH"; // <--- **THIS IS THE CRUCIAL CHANGE**
+  timestamp: number; // Unix 타임스탬프 (밀리초 단위, JavaScript Date 객체에 바로 사용 가능)
+  blockNumber: string; // 트랜잭션이 포함된 블록 번호
+  status: "success" | "failed" | "pending"; // 트랜잭션 상태
+  direction: "sent" | "received" | "unknown"; // 이 지갑 기준에서의 방향
 }

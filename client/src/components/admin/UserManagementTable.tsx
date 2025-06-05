@@ -1,7 +1,7 @@
 // TokenWallet/client/src/components/admin/UserManagementTable.tsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { UserInfo } from "../../types/auth";
+import { UserInfo } from "../../types";
 import { UserDetailModal } from "./UserDetailModal";
 import axiosClient from "../../api/axiosClient";
 import { toast } from 'react-toastify';

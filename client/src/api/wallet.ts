@@ -1,7 +1,7 @@
 // TokenWallet/client/src/api/walletApi.ts
 
 import axiosClient from './axiosClient';
-import { WalletBalances } from '../types/auth'; // 또는 src/types/wallet.ts에서 임포트
+import { WalletBalances } from '../types'; // 또는 src/types/wallet.ts에서 임포트
 
 /**
  * 현재 로그인된 사용자의 지갑 잔액 정보를 가져오는 함수입니다.
@@ -25,7 +25,7 @@ export const fetchWalletBalances = async (): Promise<WalletBalances> => {
 export interface SendTokenPayload {
   toAddress: string; // 수신자 지갑 주소
   amount: string;    // 송금할 양 (항상 문자열로 전달, 백엔드에서 BigNumber 처리)
-  // tokenType: 'ETH' | 'CUSTOM_TOKEN'; // ✨ 추가: 송금할 토큰 타입 (ETH 또는 사용자 정의 토큰)
+  tokenType: 'ETH' | 'CUSTOM_TOKEN'; // ✨ 추가: 송금할 토큰 타입 (ETH 또는 사용자 정의 토큰)
 }
 
 /**
@@ -37,7 +37,7 @@ export interface SendTokenResponse {
   senderAddress: string;   // 송신자 주소 (백엔드에서 반환)
   receiverAddress: string; // 수신자 주소 (백엔드에서 반환)
   amount: string;          // 송금된 양 (백엔드에서 반환)
-  // tokenType: 'ETH' | 'CUSTOM_TOKEN'; // 송금된 토큰 타입 (백엔드에서 반환)
+  tokenType: 'ETH' | 'CUSTOM_TOKEN'; // 송금된 토큰 타입 (백엔드에서 반환)
 }
 
 /**

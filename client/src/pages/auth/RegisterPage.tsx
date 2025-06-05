@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { register as registerApi } from "../../api/auth";
-import { RegisterPayload } from "../../types/auth";
+import { RegisterPayload } from "../../types";
 import { useNavigate, Link } from "react-router-dom";
 
 const RegisterPage: React.FC = () => {

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LoginPayload } from '../../types/auth'; // 로그인 페이로드 타입 임포트
+import { LoginPayload } from '../../types'; // 로그인 페이로드 타입 임포트
 
 const AdminLoginPage: React.FC = () => {
   const [username, setUsername] = useState('');

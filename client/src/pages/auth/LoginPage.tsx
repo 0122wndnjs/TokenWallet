@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { login } from "../../api/auth";
-import { LoginPayload } from "../../types/auth";
+import { LoginPayload } from "../../types";
 import { useNavigate, Link } from "react-router-dom";
 
 const LoginPage: React.FC = () => {

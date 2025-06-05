@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import axiosClient from '../../api/axiosClient'; 
-import { UserInfo } from '../../types/auth'; 
+import { UserInfo } from '../../types'; 
 import { toast } from 'react-toastify'; // ✨ toast 임포트 확인
 
 interface UserDetailModalProps {
